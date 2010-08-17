@@ -1,0 +1,19 @@
+[# standard footer used by all ViewVC pages ]
+
+</td>
+</tr>
+</table>
+
+<br />
+<br />
+
+<div id="footer">
+  <div id="poweredbylogo">
+    <img width="102" height="31" alt="Powered by CollabNet" src="[app_server_root_url]/sf-images/about/poweredbylogo.gif"/>
+  </div>
+  &copy; 2010 CollabNet. CollabNet is a registered trademark of CollabNet, Inc.
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE sf-api-protocols PUBLIC "-//VA Software, Inc.//DTD API Protocols 1.0//EN"
+        "http://schema.vasoftware.com/sf/dtd/sf-api-protocols_1_0.dtd">
+
+<sf-api-protocols>
+  <default-protocol>local</default-protocol>
+  <protocol>
+    <protocol-name>rmi</protocol-name>
+    <protocol-class>com.vasoftware.sf.api.RmiProtocol</protocol-class>
+    <config-params>
+      <param>
+        <param-name>java.naming.provider.url</param-name>
+        <param-value>localhost</param-value>
+      </param>
+      <param>
+        <param-name>java.naming.factory.url.pkgs</param-name>
+        <param-value>org.jboss.naming:org.jnp.interfaces</param-value>
+      </param>
+      <param>
+        <param-name>java.naming.factory.initial</param-name>
+        <param-value>org.jnp.interfaces.NamingContextFactory</param-value>
+      </param>
+    </config-params>
+  </protocol>
+  <protocol>
+    <protocol-name>local</protocol-name>
+    <protocol-class>com.vasoftware.sf.api.LocalProtocol</protocol-class>
+    <config-params>
+      <param>
+        <param-name>java.naming.factory.url.pkgs</param-name>
+        <param-value>org.jboss.naming:org.jnp.interfaces</param-value>
+      </param>
+      <param>
+        <param-name>java.naming.factory.initial</param-name>
+        <param-value>org.jnp.interfaces.NamingContextFactory</param-value>
+      </param>
+    </config-params>
+  </protocol>
+</sf-api-protocols>

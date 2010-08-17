@@ -1,0 +1,57 @@
+Overview
+--------
+This is the packaging of the CollabNet TeamForge (CTF) Integration Server.  It
+includes everything to build and run the software that would allow you to
+configure a CTF server to use the system running the software as an SCM
+integration server.
+
+Notes
+-----
+As of right now, the following directories are pulled in from the CTF source
+base and SHOULD NOT be modified unless you want to change the corresponding
+sources in CTF:
+
+* installer/integration-scripts
+* installer/viewvc
+
+CSVN
+----
+Currently we are building web applications for a standalone CTF integration
+server and a specialized CSVN integration server.  Any CSVN-specific work
+should be done in csvn-webapp.
+
+Running
+-------
+The only place that "running" the application makes sense at this point is to
+run a remote SCM integration server for CTF.  To do this, follow these steps:
+
+* mvn clean package -Denvironment=development -Dctf.hostname=<CTF_HOSTNAME>
+* cd ctf-webapp
+* sudo httpd -f `pwd`/target/sourceforge_home/conf/httpd.conf -k start
+* mvn jetty:run-exploded
+
+Stopping
+--------
+Stopping is as simple as CTRL-C in the window Jetty is running in and then
+running the following:
+
+* sudo httpd -f `pwd`/target/sourceforge_home/conf/httpd.conf -k stop
+
+Packaging
+---------
+To package the available artifacts, which at this time are CollabNet
+Subversion (CSVN) specific, run the following:
+
+* mvn clean install assembly:assembly
+
+At this point, you should have the following "packages":
+
+* csvn-webapp/target/integration.war: The CSVN-specific CTF integration
+   server web application
+* target/integration-scripts.zip: The CSVN-specific CTF integration server
+   scripts
+
+Status
+------
+As progress on this project is made, this file will be updated to reflect
+not only the state of the project but how to use it and its built artifacts.

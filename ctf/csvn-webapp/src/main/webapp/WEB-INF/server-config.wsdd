@@ -1,0 +1,73 @@
+<!--
+    This deploys SourceForge adapter listener services. The allowedMethods
+    sections are organized by class hierarchy (i.e. which ancestor defined the
+    method) and sorted within each class group.
+-->
+<deployment
+    xmlns="http://xml.apache.org/axis/wsdd/"
+    xmlns:java="http://xml.apache.org/axis/wsdd/providers/java"
+    xmlns:ns1="urn:SourceForgeAdapterServices">
+  <service
+      name="AdminService"
+      provider="java:MSG">
+    <parameter
+        name="allowedMethods"
+        value="AdminService" />
+    <parameter
+        name="enableRemoteAdmin"
+        value="false" />
+    <parameter
+        name="className"
+        value="org.apache.axis.utils.Admin" />
+    <namespace>http://xml.apache.org/axis/wsdd/</namespace>
+  </service>
+  <service
+      name="SubversionScmServerDaemon"
+      provider="java:RPC">
+    <requestFlow>
+      <handler
+          name="ProfileRequest"
+          type="java:com.vasoftware.sf.axis.ProfilingRequestHandler" />
+    </requestFlow>
+    <responseFlow>
+      <handler
+          name="ProfileResponse"
+          type="java:com.vasoftware.sf.axis.ProfilingResponseHandler" />
+    </responseFlow>
+    <parameter
+        name="className"
+        value="com.vasoftware.sf.externalintegration.adapters.subversiondaemon.SubversionScmServerDaemonSecure" />
+    <parameter
+        name="allowedMethods"
+        value="archiveRepository
+               beginBlackduckAnalysis
+               cancelBlackduckAnalysis
+               cleanupBlackduckRepository
+               getArchiveRepositoryRootPath
+               getBlackduckAnalysisStatus
+               isBlackduckEnabled
+               setRepositoryAccessLevel
+               verifyExternalSystem
+               verifyPath
+               createRepository
+               initializeExternalSystem
+               deleteExternalSystem
+               setupRepository" />
+    <beanMapping
+        qname="sfiNS:CommandWrapperFault"
+        xmlns:sfiNS="http://schema.vasoftware.com/sf/integration/type"
+        languageSpecificType="java:com.vasoftware.sf.externalintegration.execution.CommandWrapperFault" />
+    <beanMapping
+        qname="sfiNS:UserAlreadyExistsFault"
+        xmlns:sfiNS="http://schema.vasoftware.com/sf/integration/type"
+        languageSpecificType="java:com.vasoftware.sf.externalintegration.execution.UserAlreadyExistsFault" />
+    <beanMapping
+        qname="sfiNS2:IntegrationFault"
+        xmlns:sfiNS2="http://schema.vasoftware.com/soapfault/extint"
+        languageSpecificType="java:com.vasoftware.sf.externalintegration.IntegrationFault" />
+    <beanMapping
+        qname="sfiNS2:ObjectAlreadyExistsFault"
+        xmlns:sfiNS2="http://schema.vasoftware.com/soapfault/extint"
+        languageSpecificType="java:com.vasoftware.sf.externalintegration.ObjectAlreadyExistsFault" />
+  </service>
+</deployment>

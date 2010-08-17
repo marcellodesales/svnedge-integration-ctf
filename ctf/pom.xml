@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.collabnet.teamforge</groupId>
+  <artifactId>integration-server</artifactId>
+  <packaging>pom</packaging>
+  <version>1.0</version>
+  <name>CTF Integration Server :: Project</name>
+  <url>http://www.collab.net/products/ctf/</url>
+  <scm>
+    <connection>scm:svn:https://forge.collab.net/svn/repos/svnedge/trunk/components/ctf-integration-server</connection>
+    <developerConnection>scm:svn:https://forge.collab.net/svn/repos/svnedge/trunk/components/ctf-integration-server</developerConnection>
+    <tag>HEAD</tag>
+    <url>https://forge.collab.net/integration/viewvc/viewvc.cgi/trunk/components/ctf-integration-server/?root=svnedge&amp;system=exsy1017</url>
+  </scm>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>create</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <getRevisionOnlyOnce>true</getRevisionOnlyOnce>
+          <revisionOnScmFailure>UNKNOWN</revisionOnScmFailure>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>LATEST</version>
+        <inherited>false</inherited>
+        <executions>
+          <execution>
+            <id>create-unique-build-artifacts</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <!-- Create the integration-scripts-latest.zip -->
+                <copy todir="target/integration-scripts/integration">
+                  <fileset dir="installer/integration-scripts">
+                    <include name="LogFile.py" />
+                    <include name="post-commit.py" />
+                    <include name="pre-commit.py" />
+                    <include name="pre-revprop-change.py" />
+                    <include name="sfauth.py" />
+                    <include name="SourceForge.py" />
+                    <include name="SubversionUtil.py" />
+                  </fileset>
+                </copy>
+                <copy todir="target/integration-scripts/integration/viewvc/lib/vcauth/teamforge">
+                  <fileset dir="installer/viewvc/lib/vcauth/teamforge">
+                    <include name="__init__.py" />
+                  </fileset>
+                </copy>
+                <copy todir="target/integration-scripts/integration/viewvc/bin/mod_python">
+                  <fileset dir="installer/scripts/viewvc/mod_python">
+                    <include name="ctf_handler.py" />
+                  </fileset>
+                </copy>
+                <zip destfile="target/integration-scripts-latest.zip" basedir="target/integration-scripts" />
+
+                <!-- Create the revision specific archive -->
+                <copy file="target/integration-scripts-latest.zip" tofile="target/integration-scripts-r${buildNumber}.zip" />
+              </tasks>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+  <modules>
+    <module>webapp</module>
+    <module>server</module>
+    <module>installer</module>
+    <module>csvn-webapp</module>
+    <module>ctf-webapp</module>
+  </modules>
+</project>

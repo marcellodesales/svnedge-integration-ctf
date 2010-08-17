@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+  <!--
+    @COPYRIGHT SourceForge(r) Enterprise Edition Copyright 2007 CollabNet, Inc.
+    All rights reserved. http://www.collab.net COPYRIGHT@
+  -->
+
+<!DOCTYPE web-app
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+    "http://java.sun.com/dtd/web-app_2_3.dtd">
+
+<web-app>
+  <display-name>Apache-Axis</display-name>
+  <servlet>
+    <servlet-name>AxisServlet</servlet-name>
+    <display-name>Apache-Axis Servlet</display-name>
+    <servlet-class>org.apache.axis.transport.http.AxisServlet</servlet-class>
+  </servlet>
+
+  <servlet>
+    <servlet-name>AdminServlet</servlet-name>
+    <display-name>Axis Admin Servlet</display-name>
+    <servlet-class>org.apache.axis.transport.http.AdminServlet</servlet-class>
+    <load-on-startup>100</load-on-startup>
+  </servlet>
+
+  <!--
+    uncomment this and the servlet-mapping if you want the SOAPMonitorService
+  -->
+  <!--
+    <servlet> <servlet-name>SOAPMonitorService</servlet-name>
+    <display-name>SOAPMonitorService</display-name> <servlet-class>
+    org.apache.axis.monitor.SOAPMonitorService </servlet-class> <init-param>
+    <param-name>SOAPMonitorPort</param-name> <param-value>5001</param-value>
+    </init-param> <load-on-startup>100</load-on-startup> </servlet>
+  -->
+
+  <!-- The bootstrap servlet for our application -->
+  <servlet>
+    <servlet-name>bootstrap</servlet-name>
+    <servlet-class>com.vasoftware.sf.externalintegration.BootstrapServlet</servlet-class>
+    <init-param>
+      <param-name>apiProtocolUrl</param-name>
+      <param-value>/WEB-INF/sf-api-protocols.xml</param-value>
+    </init-param>
+    <load-on-startup>100</load-on-startup>
+  </servlet>
+
+  <servlet>
+    <servlet-name>ScmPermissionsProxyServlet</servlet-name>
+    <servlet-class>com.vasoftware.sf.externalintegration.ScmPermissionsProxyServlet</servlet-class>
+    <load-on-startup>100</load-on-startup>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>AxisServlet</servlet-name>
+    <url-pattern>/servlet/AxisServlet</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>AxisServlet</servlet-name>
+    <url-pattern>*.jws</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>AxisServlet</servlet-name>
+    <url-pattern>/services/*</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>ScmPermissionsProxyServlet</servlet-name>
+    <url-pattern>/servlet/ScmPermissionsProxyServlet</url-pattern>
+  </servlet-mapping>
+
+  <!--
+    uncomment this and the servlet definition if you want the SOAPMonitorService
+  -->
+  <!--
+    <servlet-mapping> <servlet-name>SOAPMonitorService</servlet-name>
+    <url-pattern>/SOAPMonitor</url-pattern> </servlet-mapping>
+  -->
+
+  <!-- uncomment this if you want the admin servlet -->
+  <!--
+    <servlet-mapping> <servlet-name>AdminServlet</servlet-name>
+    <url-pattern>/servlet/AdminServlet</url-pattern> </servlet-mapping>
+  -->
+  <welcome-file-list
+    id="WelcomeFileList_1">
+    <welcome-file>index.html</welcome-file>
+    <welcome-file>index.jsp</welcome-file>
+    <welcome-file>index.jws</welcome-file>
+  </welcome-file-list>
+</web-app>

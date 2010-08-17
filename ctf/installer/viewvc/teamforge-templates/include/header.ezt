@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!-- ViewVC :: http://www.viewvc.org/ -->
+<head>
+<title>TeamForge : [page_title]</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="generator" content="ViewVC [vsn]" />
+<link rel="shortcut icon" href="[app_server_root_url]/sf-images/icons/favicon.ico" type="image/x-icon" />
+[if-any rss_href]<link rel="alternate" type="application/rss+xml" title="RSS [[][rootname]][where]" href="[rss_href]" />[end]
+<link rel="stylesheet" type="text/css" href="[app_server_root_url]/css/styles.css" />
+<link rel="stylesheet" type="text/css" href="[app_server_root_url]/css/styles_new.css" />
+<script language="JavaScript" src="[app_server_root_url]/sf/js/sf_functions.js" type="text/javascript"></script>
+<script type="text/javascript" src="[app_server_root_url]/sf/js/jquery/jquery.js"></script>
+<script type="text/javascript" src="[app_server_root_url]/sf/js/jump_to.js" ></script>
+[is testmode "1"]
+[else]
+<script type="text/javascript" src="[app_server_root_url]/sf/js/yui/yahoo-dom-event.js"></script>
+<script type="text/javascript" src="[app_server_root_url]/sf/js/yui/container_core-min.js"></script>
+<script type="text/javascript" src="[app_server_root_url]/sf/js/yui/menu-min.js"></script>
+<script type="text/javascript">
+/* Initialize and render the Menu when its elements are ready 
+   to be scripted.
+ */
+
+YAHOO.util.Event.onContentReady("navLinks", function () {
+  var oMenu = new YAHOO.widget.MenuBar("navLinks", {
+                            position: "static",
+                            autosubmenudisplay: true,
+                            showdelay: 125,
+                            hidedelay:  750,
+                            lazyload: true });
+         oMenu.render();
+});
+</script>
+[end]
+</head>
+<body text="#000000" bgcolor="#ffffff">
+
+[is testmode "1"]
+<!-- sf menu not shown in test mode -->
+[else]
+[sf_header]
+[end]
+
+<div class="contentArea">
+<table class="Paddedtable vc_table">
+<tr>
+  <td><p><b>
+    [for nav_path]
+      [if-any nav_path.href]<a href="[nav_path.href]">[end]
+      [if-index nav_path first]
+        [[][nav_path.name]][else]
+        [nav_path.name][end][if-any nav_path.href]</a>[end]
+      [if-index nav_path last][else]/[end]
+    [end]
+  </b></p>
