@@ -94,7 +94,6 @@
       <plugin>
         <artifactId>maven-war-plugin</artifactId>
         <groupId>org.apache.maven.plugins</groupId>
-        <version>LATEST</version>
         <configuration>
           <attachClasses>true</attachClasses>
         </configuration>

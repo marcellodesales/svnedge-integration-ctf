@@ -25,7 +25,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-war-plugin</artifactId>
-        <version>LATEST</version>
         <configuration>
           <overlays>
             <overlay>
@@ -38,7 +37,6 @@
       <plugin>
         <groupId>org.mortbay.jetty</groupId>
         <artifactId>maven-jetty-plugin</artifactId>
-        <version>LATEST</version>
         <configuration>
           <contextPath>/integration</contextPath>
           <connectors>
@@ -93,7 +91,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
-        <version>LATEST</version>
         <inherited>false</inherited>
         <executions>
           <execution>

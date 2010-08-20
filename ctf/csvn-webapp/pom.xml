@@ -35,7 +35,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-war-plugin</artifactId>
-        <version>LATEST</version>
         <configuration>
           <overlays>
             <overlay>
@@ -58,7 +57,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
-        <version>LATEST</version>
         <inherited>false</inherited>
         <executions>
           <execution>
