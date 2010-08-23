@@ -1,16 +1,13 @@
 #!/usr/bin/env python2
 
-#
-# $RCSfile: sfauth.py,v $
-#
 # SourceForge(r) Enterprise Edition
-# Copyright 2007 CollabNet, Inc.  All rights reserved.
+# Copyright 2007-2010 CollabNet, Inc.  All rights reserved.
 # http://www.collab.net
 #
 # This file contains an authorization method, authenhandler(), which can
 # used as an apache authentication method.
 
-import types, string, time, threading
+import datetime
 import os
 import sys
 import SOAPpy
@@ -22,9 +19,42 @@ from mod_python import apache
 from urlparse import urlparse
 
 DEBUG = False
-REPORT_THRESHOLD = 50
+
 BRANDING_REPOSITORY_PATH = "/svn/repository-branding"
 SVN_SPECIAL_URI = "!svn"
+
+CACHE = dict()
+CACHE_ENABLED = True
+CACHE_TIMEOUT = 120
+MAX_CACHE_ENTRIES = 10
+ENTRY_NOT_FOUND = '!!!NOTFOUND!!!'
+
+# Below is a tuple of known access types.
+ACCESS_TYPES = (
+    'commit', # This access type is for operations that will change the repository
+    'view', # This access type is for operations that will view the repository
+)
+
+# Below is a tuple of known access type modifiers
+#
+# (Access type modifiers are used to make handle situations where just
+#  checking access at a particular path is more complex.  A perfect
+#  example of this is MOVE.  For a DELETE operation, the user needs to
+#  have 'commit' access at the path being moved, and 'all' paths below
+#  that path, in the event it's a directory of course.  Modifiers let
+#  us ask two special questions about paths that may be a directory:
+#    [1]: Does a user have the ability to commit/view at all paths below the path in question
+#    [2]: Does a user have the ability to commit/view at any path below the path in question
+#
+# Access modifiers are usually handled by the _has_permission() function
+# which means you won't find many places where we explicitly call
+# _has_permission() with a modifier.  Places where it makes sense to
+# explicitly use a modifier is when initially checking for global
+# read and global write access for early return if possible.
+ACCESS_TYPE_MODIFIERS = (
+    'all', # This modifier means access at the specified path *and* everywhere below
+    'any', # This modifier means access at the specified path *or* anywhere below
+)
 
 # Below is a structure that contains the special folders that can be found in a Subversion uri.
 # Here is the format for each element:
@@ -65,118 +95,45 @@ METHOD_2_ACCESS_TYPE = {
 def authzhandler(req):
     """ This method gets called by mod_python to perform authorization """
     try:
-        _update_environment(req.get_options())
-
         return doAuthzhandler(req)
     except Exception, e:
         import traceback
+
         exception = sys.exc_info()
         traceLines = traceback.format_exception(exception[0], exception[1], exception[2])
-        req.log_error(string.join(traceLines))
+
+        for line in traceLines:
+            req.log_error(line)
+
         return apache.HTTP_INTERNAL_SERVER_ERROR
 
 def authenhandler(req):
     """ This method gets called by mod_python to perform authentication """
     try:
-        _update_environment(req.get_options())
-
         return doAuthenhandler(req)
     except Exception, e:
         import traceback
+
         exception = sys.exc_info()
         traceLines = traceback.format_exception(exception[0], exception[1], exception[2])
-        req.log_error(string.join(traceLines))
+
+        for line in traceLines:
+            req.log_error(line)
+
         return apache.HTTP_INTERNAL_SERVER_ERROR
 
 def doAuthzhandler(req):
     """ This method queries against the sourceforge server to check if the username can access a repository path """
-    
-    # The response is one of the following, or an unexpected error:
-    #   0 = apache.OK
-    #   1 = apache.HTTP_FORBIDDEN
-    #   2 = apache.HTTP_INTERNAL_SERVER_ERROR
-    response = 1
-    options = req.get_options()
+    # Prepare to handle the request
+    _prepare(req)
 
-    try:
-        repo_name, repo_path = __dav_svn_parse_uri(req.uri, options['svn.root.uri'])
-
-        # Ignore the uri for MERGE requests, with both mod_dav_svn and mod_authz_svn do.
-        if req.method == 'MERGE':
-            repo_path = None
-    except RuntimeError, re:
-        req.log_error(re)
-
-    if DEBUG:
-        req.log_error("[scm debug] (%s)%s->%s" % (req.user, req.method, req.uri))
-        req.log_error("[scm debug] Repository name: %s" % repr(repo_name))
-        req.log_error("[scm debug] Repository path: %s" % repr(repo_path))
-
-    # We use the connection's notes table to store per-connection cache information.  That being said,
-    # we use the 'authz_paths' to store a cache of paths we've already requested authorization for, to
-    # limit the number of ScmPermissionsProxyServlet requests.  The format for this:
-    #   The key uses the following format: METHOD:REPO_NAME/REPO_PATH
-    #   The value is a tuple with access for: (path, path and all children, path and/or any children)
-    authorized_paths = _get_from_notes(req, 'authz_paths', True)
-
-    if authorized_paths is None:
-        authorized_paths = {}
+    has_access = False
+    repo_name = req.repo_name
+    repo_path = req.repo_path
 
     # Only proceed if there was a repository name found
     if repo_name and repo_name != "":
-        systemId = _get_from_notes(req, 'system_id')
-        accessType = 'view' # Reasonable default
-        global_write_access_key = '%s:global_write_access' % repo_name
-        global_read_access_key = '%s:global_read_access' % repo_name
-        global_write_access = _get_from_notes(req, global_write_access_key, True)
-        global_read_access = _get_from_notes(req, global_read_access_key, True)
-
-        # Retrieve the systemId if necessary and persist it
-        if systemId is None:
-            try:
-                # It's important to reload properties, in case system ID changes (e.g. during tests)
-                SourceForge.load()
-
-                # This is a branding repo, get the external system id from ScmListener
-                if req.uri.startswith(BRANDING_REPOSITORY_PATH):
-                    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
-                    key = SourceForge.createScmRequestKey()
-                    systemId = scm.getBrandingExternalSystemId(key)
-                else:
-                    # regular svn repo: load external system id from /svnroot/.scm.properties
-                    repoBase = SourceForge.get('subversion.repository_base')
-                    SourceForge.load(repoBase + "/.scm.properties")
-                    systemId = SourceForge.get('external_system_id')
-            except Exception, inst:
-                req.log_error('Failed to get external system id: ' + inst.__str__())
-                return apache.HTTP_INTERNAL_SERVER_ERROR
-
-            _add_to_notes(req, 'system_id', systemId)
-
-        # Retrieve the global access information if necessary and persist it
-        if global_write_access is None or global_read_access is None:
-            global_write_raw, global_read_raw = SourceForge.getScmPermissionForPath(req.user, systemId,
-                                                                                    repo_name + '/', None)
-
-            if DEBUG:
-                req.log_error("[scm debug] [ScmPermissionsProxy]: (%s, %s, %s, %s) -> %s" % (req.user, systemId,
-                                                                                             repo_name + '/',
-                                                                                             None,
-                                                                                             repr((global_write_raw,
-                                                                                                   global_read_raw))))
-
-            if global_write_raw == 0:
-                global_write_access = True
-            else:
-                global_write_access = False
-
-            if global_read_raw == 0:
-                global_read_access = True
-            else:
-                global_read_access = False
-
-            _add_to_notes(req, global_write_access_key, global_write_access, True)
-            _add_to_notes(req, global_read_access_key, global_read_access, True)
+        access_type = None # Reasonable default
 
         # Retrieve the required access type
         if not METHOD_2_ACCESS_TYPE.has_key(req.method):
@@ -186,7 +143,7 @@ def doAuthzhandler(req):
             # There are a few scenarios that should be mentioned, since they are special:
             #     COPY: When a Subversion copy request comes in, the actual uri in the
             #           Subversion request is the copy source.  The copy source only needs
-            #           to have recursive 'read' access.  The destination is in the
+            #           to have recursive 'view' access.  The destination is in the
             #           'Destination' request header.  The destination needs to have
             #           recursive 'commit' access.  The destination is handled later.
             #
@@ -195,28 +152,42 @@ def doAuthzhandler(req):
             #           perspective, both the source and the destionation need
             #           recursive 'commit' access.
             if req.method == "COPY":
-                accessType = 'view'
+                access_type = 'view'
             else:
-                accessType = METHOD_2_ACCESS_TYPE[req.method]
+                access_type = METHOD_2_ACCESS_TYPE[req.method]
+
+        # Check for global read and write permission either from cache or by
+        # checking against PBPs.
+        global_read_access = _get_from_cache(req, 'global_read_access')
+        global_write_access = _get_from_cache(req, 'global_write_access')
+
+        if global_read_access == ENTRY_NOT_FOUND:
+            global_read_access = _has_permission(req, '/', 'view', access_modifier='all')
+        if global_write_access == ENTRY_NOT_FOUND:
+            global_write_access = _has_permission(req, '/', 'commit', access_modifier='all')
+
+        # Cache the global read/write answers to avoid the need to reauthorize in subsequent requests
+        _add_to_cache(req, 'global_read_access', global_read_access)
+        _add_to_cache(req, 'global_write_access', global_write_access)
 
         if global_write_access:
             # The user has global write access.  No need to authorize.
-            response = 0
+            has_access = True
 
             if DEBUG:
-                req.log_error("[scm debug] [from global]: 'commit'")
-        elif global_read_access and accessType == 'view':
+                _debug(req, 'User %s has global commit on %s...' % (req.user, repo_name))
+        elif global_read_access and access_type == 'view':
             # If the user has global read and this is a read request
-            response = 0
-            
+            has_access = True
+
             if DEBUG:
-                req.log_error("[scm debug] [from global]: 'read'")
+                _debug(req, 'User %s has global read on %s...' % (req.user, repo_name))
         elif req.method == 'OPTIONS':
             # Always allow 'OPTIONS' requests
-            response = 0
-        elif req.method == 'PROPPATCH' and req.uri.startswith("%s/%s/%s/%s" % (options['svn.root.uri'], repo_name, SVN_SPECIAL_URI, "bln")):
+            has_access = True
+        elif req.method == 'PROPPATCH' and req.uri.startswith("%s/%s/%s/%s" % (req.svn_root_uri, repo_name, SVN_SPECIAL_URI, "bln")):
             # We need to handle authorization of revision property changes specially
-            repository = "%s/%s" % (options['svn.root.path'], repo_name)
+            repository = "%s/%s" % (req.svn_root_path, repo_name)
             revision = req.uri.split('/')[-1]
 
             try:
@@ -226,7 +197,7 @@ def doAuthzhandler(req):
                 return apache.HTTP_INTERNAL_SERVER_ERROR
 
             if DEBUG:
-                req.log_error("User %s is attempting to change a revision property for revision %s" % (req.user, revision))
+                _debug(req, 'User %s is attempting to change a revision property for revision %s' % (req.user, revision))
 
             # For authorizing a revision property change, all we need to do is
             # get a list of changed paths for the revision, regardless of change,
@@ -236,18 +207,18 @@ def doAuthzhandler(req):
 
             # Authorize each path modified in the revision
             for change in changes:
-                response = authorize_request(req, authorized_paths, systemId, repo_name, change[2], "commit")
+                has_access = _has_permission(req, change[2], 'commit')
 
                 # If there is an authorization failure, break since revision property changes require
                 # 'commit' access to all changed paths for the revision.
-                if response != 0:
+                if not has_access:
                     break
         else:
-            response = authorize_request(req, authorized_paths, systemId, repo_name, repo_path, accessType)
+            has_access = _has_permission(req, repo_path, access_type)
 
         # Check the destination path if the method is 'COPY' or 'MOVE' if
         # the previous check, which is the source, was permitted.
-        if response == 0 and req.method in ["COPY", "MOVE"]:
+        if has_access and req.method in ["COPY", "MOVE"]:
             if not req.headers_in.has_key('Destination'):
                 req.log_error("Invalid request: %s does not have a destination" % req.method)
                 return apache.HTTP_INTERNAL_SERVER_ERROR
@@ -260,41 +231,37 @@ def doAuthzhandler(req):
             # uri lookup.
             if req.main and (dest_url == req.parsed_uri[apache.URI_PATH]):
                 if DEBUG:
-                    req.log_error("%s subrequest has matching source and destination (%s)" % (req.method, dest_uri))
+                    _debug(req, '%s subrequest has matching source and destination (%s)' % (req.method, dest_uri))
                     
             # Decode the uri
             dest_uri = urllib.unquote(dest_uri)
 
             try:
-                dest_repo_name, dest_repo_path = __dav_svn_parse_uri(dest_uri, options['svn.root.uri'])
+                dest_repo_name, dest_repo_path = __dav_svn_parse_uri(dest_uri, req.svn_root_uri)
+
+                req.repo_name = dest_repo_name
             except RuntimeError, re:
                 req.log_error(re)
 
             if DEBUG:
-                req.log_error("[scm debug] Destination repository name: %s" % repr(dest_repo_name))
-                req.log_error("[scm debug] Destination repository path: %s" % repr(dest_repo_path))
+                _debug(req, 'Destination repository name: %s' % repr(dest_repo_name))
+                _debug(req, 'Destination repository path: %s' % repr(dest_repo_path))
 
-            response = authorize_request(req, authorized_paths, systemId, dest_repo_name, dest_repo_path, "commit")
+            has_access = _has_permission(req, dest_repo_path, 'commit', access_modifier='all')
 
-    if response == 0:
+    if has_access:
         if DEBUG:
-            req.log_error("[scm debug]: Response 200")
+            _debug(req, 'Response 200')
 
         return apache.OK
-    elif response == 1:
+    else:
         if DEBUG:
-            req.log_error("[scm debug]: Response 403")
+            _debug(req, 'Response 403')
 
         return apache.HTTP_FORBIDDEN
-    else:
-        req.log_error("[scm debug]: Unexpected response: %s.  Check the integration server logs." % response)
-        req.log_error("[scm debug]: Response 500")
-
-        return apache.HTTP_INTERNAL_SERVER_ERROR
 
 def doAuthenhandler(req):
-    """ This method queries against the sourceforge server to check is the username/password is valid """
-    authenticated_users = _get_from_notes(req, 'authn_cache')
+    """ This method queries against the TeamForge server to check is the username/password is valid """
     is_valid_user = False
 
     # As documented in mod_python, before you can successfully call req.user you must call
@@ -303,9 +270,23 @@ def doAuthenhandler(req):
     password = req.get_basic_auth_pw()
     username = req.user
 
+    if DEBUG:
+        _debug(req, 'Authenticating %s' % username)
+
     # Quick return for anonymous user, since it's not supported right now.
     if username is None or password is None:
         return apache.HTTP_UNAUTHORIZED
+
+    # Prepare to handle the request
+    _prepare(req)
+
+    # Get the authenticated users from cache
+    authenticated_users = _get_from_cache(req, 'authenticated_users')
+
+    # If there is no entry for 'authenticated_users', initialize to None.  (This can happen
+    # when there is no cache in place for the given system:repo:user:conn.)
+    if authenticated_users == ENTRY_NOT_FOUND:
+        authenticated_users = None
 
     uname_pwd_hash = SourceForge.getSha1Hash('%s:%s' % (username, password))
 
@@ -326,7 +307,7 @@ def doAuthenhandler(req):
             elif response == 1:
                 is_valid_user = False
             else:
-                req.log_error("[scm debug]: Unexpected response '%s'" % str(response))
+                req.log_error("Unexpected response '%s'" % str(response))
 
                 return apache.HTTP_INTERNAL_SERVER_ERROR
         except Exception, inst:
@@ -342,10 +323,13 @@ def doAuthenhandler(req):
         if not uname_pwd_hash in authenticated_users:
             authenticated_users.append(uname_pwd_hash)
 
-            # Cache the authenticated users in the connection's notes table
-            _add_to_notes(req, 'authn_cache', authenticated_users)
+            # Persist the authenticated users
+            _add_to_cache(req, 'authenticated_users', authenticated_users)
 
         req.headers_out.add('CtfUserName',username)
+
+        req.has_authenticated = True
+
         # Now authorize the user
         return authzhandler(req);
     else:
@@ -357,170 +341,7 @@ def _update_environment(options):
     if options.has_key('sourceforge.properties.path'):
         os.environ['SOURCEFORGE_PROPERTIES_PATH'] = options['sourceforge.properties.path']
 
-def _get_from_notes(req, key, user_specific=False):
-    """ Return the value stored in Apache's connection notes for the given key
-        or None if the key isn't present.  If user_specific=True, the key will
-        be prepended with the username so that any retrieval of the value will
-        be user specific. """
-    real_key = key
-
-    if user_specific:
-        real_key = "%s:%s" % (req.user, key)
-
-    if req.connection.notes.has_key(real_key):
-        return eval(req.connection.notes[real_key])
-    else:
-        return None
-
-def _add_to_notes(req, key, value, user_specific=False):
-    """ Adds the value to the Apache connection notes for the given key.  If
-        user_specific=True, the key will be prepended with the username so that
-        any retrieval of the value will be user specific. """
-    real_key = key
-
-    if user_specific:
-        real_key = "%s:%s" % (req.user, key)
-
-    req.connection.notes[real_key] = repr(value)
-
-def _get_authz_from_cache(authorized_paths, repo_name, repo_path, accessType, method):
-    """ Attempts to take a dictionary of authorized paths and make an authorization answer. """
-    authz = None
-    read_paths = []
-    write_paths = []
-    needs_all = False
-    needs_any = False
-    full_repo_path = repo_name + '/'
-
-    if repo_path is not None:
-        full_repo_path = full_repo_path + repo_path
-
-    # Handle special cases for COPY/MOVE/DELETE
-    if method in ['COPY', 'DELETE', 'MOVE']:
-        needs_all = True
-
-    if repo_path is None:
-        needs_any = True
-
-    # Create a list of paths, based on access type, for easier use
-    for k, v in authorized_paths.iteritems():
-        p, t = k.split(":")
-
-        if t == 'view' and p not in read_paths:
-            read_paths.append(p)
-        elif t == 'commit' and p not in write_paths:
-            write_paths.append(p)
-
-    authz = _process_path_in_cache(authorized_paths, read_paths, write_paths, full_repo_path, accessType, False,
-                                   needs_all, needs_any, method)
-
-    # Path in question has never been authorized.  Have one of its parents that can help?
-    if authz is None:
-        path_elements = full_repo_path.split("/")
-
-        # For each parent path, check for its existence in the read/write paths and return
-        # authz accordingly.
-        for n in range(1, len(path_elements)):
-            p_path = "/".join(path_elements[:0 - n])
-
-            if len(path_elements) == 2 and n == 1:
-                p_path = p_path + "/"
-
-            if p_path not in read_paths and p_path not in write_paths:
-                continue
-
-            p_authz = _process_path_in_cache(authorized_paths, read_paths, write_paths, p_path, accessType, True,
-                                             needs_all, needs_any, method)
-
-            if p_authz is not None:
-                authz = p_authz
-
-                break
-
-    return authz
-
-def _process_path_in_cache(authorized_paths, read_paths, write_paths, path, accessType, is_parent, needs_all, needs_any,
-                           method):
-    """Process the path in the cache to see if we can answer an authz question from cache"""
-    authz = None
-    cached_read = path in read_paths
-    cached_write = path in write_paths
-    read_path = read_path_all = read_path_any = None
-    write_path = write_path_all = write_path_any = None
-    
-    if cached_read:
-        read_path, read_path_all, read_path_any = authorized_paths[path + ":view"]
-
-    if cached_write:
-        write_path, write_path_all, write_path_any = authorized_paths[path + ":commit"]
-
-    # Handle view short-circuit (Handles view, view all and view any)
-    if accessType == 'view' and (read_path_all == 0 or write_path_all == 0):
-        return 0
-
-    # Handle write short-circuit (Handle commit, commit all and commit any)
-    if accessType == 'commit' and write_path_all == 0:
-        return 0
-    
-    # Handle view all denied from cache
-    if needs_all and accessType == 'view':
-        if (read_path_all is not None and read_path_all != 0):
-            authz = 1
-
-    # Handle view any from cache
-    if needs_any and accessType == 'view':
-        if read_path_any == 0 or write_path_any == 0:
-            authz = 0
-
-    # Handle view any denied from cache
-    if needs_any and accessType == 'view':
-        if (read_path_any is not None and read_path_any != 0):
-            authz = 1
-
-    # Handle view from cache
-    if not needs_all and not needs_any and accessType == 'view':
-        if not is_parent and (read_path == 0 or write_path == 0):
-            authz = 0
-
-    # Handle view denied from cache
-    if not needs_all and not needs_any and accessType == 'view':
-        if not is_parent and (read_path is not None and read_path != 0):
-            authz = 1
-        elif is_parent and (read_path_any is not None and read_path_any != 0):
-            authz = 1
-
-    # Handle commit all denied from cache
-    if needs_all and accessType == 'commit':
-        if (read_path_any is not None and read_path_any != 0) or \
-           (write_path_any is not None and write_path_any != 0):
-            authz = 1
-
-    # Handle commit any from cache
-    if needs_any and accessType == 'commit':
-        if write_path_any == 0:
-            authz = 0
-
-    # Handle commit any denied from cache
-    if needs_any and accessType == 'commit':
-        if (read_path_any is not None and read_path_any != 0) or \
-           (write_path_any is not None and write_path_any != 0):
-            authz = 1
-
-    # Handle commit from cache
-    if not needs_all and not needs_any and accessType == 'commit':
-        if not is_parent and write_path == 0:
-            authz = 0
-
-    # Handle commit denied from cache
-    if not needs_all and not needs_any and accessType == 'commit':
-        if not is_parent and ((write_path is not None and write_path != 0) or \
-                              (read_path is not None and read_path != 0)):
-            authz = 1
-        elif is_parent and ((read_path_any is not None and read_path_any != 0) or \
-                            (write_path_any is not None and write_path_any != 0)):
-            authz = 1
-    
-    return authz
+# _update_environment()
 
 def __dav_svn_parse_uri(uri_to_split, svn_uri_root):
     """ Takes a request uri and does some magic to return the repository and relative repository path
@@ -530,7 +351,6 @@ def __dav_svn_parse_uri(uri_to_split, svn_uri_root):
           svn_repo_path - Either the relative (no leading slash) repository path, '' to signify the root
                           or None to signify there is no repository root.
     """
-
     svn_repo_name = None
     svn_repo_path = None
 
@@ -607,58 +427,319 @@ def __dav_svn_parse_uri(uri_to_split, svn_uri_root):
 
     return (svn_repo_name, svn_repo_path)
 
-def authorize_request(req, authorized_paths, systemId, repo_name, repo_path, accessType):
-    """ For the given request, authorize from cache if available or call the servlet
-        to get the authorization information. """
-    response = 1
-    cached_answer = False
-    full_repo_path = repo_name + '/'
+# __dav_svn_parse_uri()
 
-    # Append the repository path if present.
-    if repo_path is not None:
-        full_repo_path = full_repo_path + repo_path
+def _has_permission(req, repo_path, access_type, access_modifier=None):
+    """ Returns whether or not the requested access is available for the given
+    repository name and path. """
 
-    path_key = full_repo_path + ":" + accessType
+    if access_type not in ACCESS_TYPES:
+        raise ValueError("'access_type' must be one of the following: %s" % ', '.join(ACCESS_TYPES))
 
-    # Retrieve from cache, if availble
-    if authorized_paths is not None and len(authorized_paths) > 0:
-        # Check the cache to see if there is a way to determine an answer
-        t_response = _get_authz_from_cache(authorized_paths, repo_name, repo_path, accessType, req.method)
+    if access_modifier is not None and access_modifier not in ACCESS_TYPE_MODIFIERS:
+        raise ValueError("'access_modifier' must be one of the following: %s" % ', '.join(ACCESS_TYPE_MODIFIERS))
+
+    if req.repo_name is None:
+        raise ValueError("'repo_name' cannot be None and must be a valid repository name")
+
+    if repo_path is None:
+        repo_path = '/'
+        access_modifier = 'any'
+    elif req.method in ('COPY', 'DELETE', 'MOVE'):
+        access_modifier = 'all'
+
+    if not repo_path.startswith('/'):
+        repo_path = '/' + repo_path
+
+    if DEBUG:
+        access_modifier_str = ''
+
+        if access_modifier is not None:
+            if access_modifier == 'all':
+                access_modifier_str = ' (all)'
+            else:
+                access_modifier_str = ' (any)'
+
+        _debug(req, 'Checking %s%s permissions on %s%s for %s' % (access_type, access_modifier_str, req.repo_name, repo_path, req.user))
+
+    if not hasattr(req, 'pbps'):
+        pbps = _get_pbps(req)
+
+        _add_to_cache(req, 'paths', pbps)
+
+        req.pbps = pbps
+    else:
+        pbps = req.pbps
+
+    if DEBUG:
+        _debug(req, 'PBPS: %s' % repr(pbps))
+
+    # If there are no PBPs, there is no way to authorize the user so return False
+    if pbps is None or len(pbps.keys()) == 0:
+        return False
+
+    path_parts = repo_path.split('/')
+    has_access = False # Reasonable default
+
+    # To avoid the problem where '/' splits into two null strings, which results
+    # in double checking '/', just remove the duplicate entry.  This will not
+    # have any impact on the actual path being tested but will instead stop the
+    # duplicate checking of '/'.
+    if repo_path == '/':
+        path_parts = ['']
+
+    # Get permission at path by checking explicit permisions at the requested path
+    # and walking up the path tree one path at a time until a PBP is found.
+    for x in range(len(path_parts)):
+        path = '/' + '/'.join(path_parts[1:len(path_parts) - x])
+        pbp_access = 'none' # Reasonable default
+
+        if not pbps.has_key(path):
+            if DEBUG:
+                _debug(req, '  [path] %s (No PBP)' % path)
+
+            # If there is no PBP at the path, continue
+            continue
+        else:
+            pbp_access = pbps[path]
+
+            if DEBUG:
+                _debug(req, '  [path] %s->%s' % (path, pbp_access))
+
+        if access_type == 'commit' and pbp_access in ('commit'):
+            has_access = True
+        elif access_type == 'view' and pbp_access in ('commit', 'view'):
+            has_access = True
+
+        break
+
+    if access_modifier is not None:
+        if access_modifier == 'any' and not has_access:
+            # The only reason to check the 'any' modifier is if there was not previously
+            # access given.
+            for path in pbps.keys():
+                pbp_access = pbps[path]
+
+                if DEBUG:
+                    _debug(req, '  [any] %s->%s' % (path, pbp_access))
+
+                if path.startswith(repo_path):
+                    if access_type == 'commit' and pbp_access == 'commit':
+                        has_access = True
+
+                        break
+                    elif access_type == 'view' and pbp_access in ('commit', 'view'):
+                        has_access = True
+
+                        break
+        elif access_modifier == 'all' and has_access:
+            # We always have to check the 'all' modifier unless there was not previously
+            # access given.
+            for path in pbps.keys():
+                pbp_access = pbps[path]
+
+                if DEBUG:
+                    _debug(req, '  [all] %s->%s' % (path, pbp_access))
+
+                if path.startswith(repo_path):
+                    if access_type == 'commit' and pbp_access != 'commit':
+                        has_access = False
+
+                        break
+                    elif access_type == 'view' and pbp_access not in ('commit', 'view'):
+                        has_access = False
+
+                        break
+
+    if DEBUG:
+        _debug(req, 'Has permission: %s' % repr(has_access))
+
+    return has_access
+
+# _has_permission()
+
+def _add_to_cache(req, key, value):
+    """ Adds an object to cache. """
+    if CACHE_ENABLED:
+        global CACHE
+
+        if not CACHE.has_key(req.cache_key):
+            CACHE[req.cache_key] = dict()
+            CACHE[req.cache_key]['timestamp'] = datetime.datetime.now()
 
         if DEBUG:
-            req.log_error("[scm debug] [from cache]: (%s, %s, %s, %s) -> %s" % (repr(authorized_paths),
-                                                                                full_repo_path,
-                                                                                accessType, req.method,
-                                                                                t_response))
+            _debug(req, '(add) Initializing cache entry for %s' % req.cache_key)
 
-        if t_response is not None:
-            cached_answer = True
+        CACHE[req.cache_key][key] = value
 
-            response = t_response
+    if DEBUG:
+        _debug(req, '(add) Cache entries: %d' % len(CACHE.keys()))
 
-    if not cached_answer:
-        # Query for permissions
-        response, all_response, any_response = SourceForge.getScmPermissionForPath(req.user, systemId,
-                                                                                   full_repo_path,
-                                                                                   accessType)
+# _add_to_cache()
+
+def _get_from_cache(req, key):
+    """ Retrieves an object from cache. """
+    if DEBUG:
+        _debug(req, '(get - %s) Cache entries: %d' % (key, len(CACHE.keys())))
+
+    if CACHE.has_key(req.cache_key) and CACHE[req.cache_key].has_key(key):
+        return CACHE[req.cache_key][key]
+    else:
+        return ENTRY_NOT_FOUND
+
+# _get_from_cache()
+
+def _remove_from_cache(req):
+    """ Removes an entry from cache. """
+    if DEBUG:
+        _debug(req, '(remove-pre) Cache entries: %d' % len(CACHE.keys()))
+
+    if CACHE.has_key(req.cache_key):
+        if DEBUG:
+            _debug(req, 'Removing cache entry for %s' % repr(req.cache_key))
+
+        del CACHE[req.cache_key]
+    else:
+        if DEBUG:
+            _debug(req, 'Unable to find a cache entry for %s' % repr(req.cache_key))
+
+    if DEBUG:
+        _debug(req, '(remove-post) Cache entries: %d' % len(CACHE.keys()))
+
+# _remove_from_cache()
+
+def _clear_cache(req):
+    """ Removes all cache entries. """
+    global CACHE
+
+    CACHE = dict()
+
+# _clear_cache()
+
+def _prepare(req):
+    """ This function looks at the request and does some processing to
+    prepare the request object for being used by other functions.  When
+    this function terminates, the following should be set:
+
+      req.cache_key: Contains the cache key for the system:repo:user:conn
+      req.system_id: Contains the system id for this integration server
+      req.repo_name: Contains the repository name
+      req.repo_path: Contains the repository path
+      req.pbps: Contains the path based permissions (This is only set if
+                there are pbps in the cache and the user is authenticated.) """
+    # If there is no repo_name or repo_path attributes for the request object,
+    # that means we need to prepare the request to be handled.
+    if not hasattr(req, 'repo_name') or not hasattr(req, 'repo_path'):
+        options = req.get_options()
+
+        _update_environment(options)
+
+        # Disable the cache for test mode
+        if options.has_key('svn.disable.cache') and options['svn.disable.cache'].lower() in ('on', 'true'):
+            global CACHE_ENABLED
+
+            CACHE_ENABLED = False
+
+        try:
+            req.svn_root_path = options['svn.root.path']
+            req.svn_root_uri = options['svn.root.uri']
+            repo_name, repo_path = __dav_svn_parse_uri(req.uri, req.svn_root_uri)
+
+            # Ignore the uri for MERGE requests, with both mod_dav_svn and mod_authz_svn do.
+            if req.method == 'MERGE':
+                repo_path = None
+
+            req.repo_name = repo_name
+            req.repo_path = repo_path
+        except RuntimeError, re:
+            req.log_error(re)
 
         if DEBUG:
-            req.log_error("[scm debug] [ScmPermissionsProxy]: (%s, %s, %s, %s) -> %s" % (req.user, systemId,
-                                                                                         full_repo_path,
-                                                                                         accessType,
-                                                                                         repr((response,
-                                                                                               all_response,
-                                                                                               any_response))))
+            _debug(req, 'Request: (%s)%s->%s' % (req.user, req.method, req.uri))
+            _debug(req, 'Repository name: %s' % repr(repo_name))
+            _debug(req, 'Repository path: %s' % repr(repo_path))
 
-        # Cache the successful result
-        authorized_paths[path_key] = (response, all_response, any_response)
+    if not hasattr(req, 'system_id'):
+        req.system_id = _get_system_id(req)
 
-        # For COPY, DELETE and MOVE, we need the 'all' permission
-        if req.method in ['COPY','DELETE','MOVE']:
-            response = all_response
-        elif repo_path is None:
-            response = any_response
+    req.cache_key = '%s:%s:%s' % (req.system_id, req.repo_name, req.user)
 
-    _add_to_notes(req, 'authz_paths', authorized_paths, True)    
+    # Clear the cache if it has reached the maximum number of entries
+    if len(CACHE.keys()) >= MAX_CACHE_ENTRIES:
+        if DEBUG:
+            _debug(req, 'Clearing cache as the cache has reached the maximum number of entries (%d)' % MAX_CACHE_ENTRIES)
 
-    return response
+        _clear_cache(req)
+
+    # If there is already a cache entry for this system:repo:user:conn, remove it if it's stale.
+    cache_entry_timestamp = _get_from_cache(req, 'timestamp')
+
+    if cache_entry_timestamp != ENTRY_NOT_FOUND:
+        # Check to see if the cache's timestamp is stale
+        if (datetime.datetime.now() - cache_entry_timestamp).seconds > CACHE_TIMEOUT:
+            # Remove the cache entry as it is stale
+            _remove_from_cache(req)
+
+    # If there is still a cache entry for the cache key, put the pbps into the request object.
+    if hasattr(req, 'has_authenticated') and req.has_authenticated and CACHE.has_key(req.cache_key):
+        pbps = _get_from_cache(req, 'paths')
+
+        if pbps != ENTRY_NOT_FOUND:
+            req.pbps = _get_from_cache(req, 'paths')
+
+# _prepare()
+
+def _get_pbps(req):
+    """ Retrieves the path-based permissions for the user:repo by calling the
+    ScmListener.getRolePaths() method on the application server. """
+    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    key = SourceForge.createScmRequestKey()
+    raw_pbps = scm.getRolePaths(key, req.user, req.system_id, req.repo_name)
+    pbps = {}
+
+    if DEBUG:
+        _debug(req, 'ScmListener.getRolePaths(%s, %s, %s, %s) -> %s' % (key, req.user, req.system_id, req.repo_name, repr(raw_pbps)))
+
+    # Take the PBPs and turn them into a dictionary where the path is the key
+    for pbp in raw_pbps:
+        pbp_parts = pbp.split(':')
+
+        pbps[pbp_parts[1]] = pbp_parts[0]
+
+    return pbps
+
+# _get_pbps()
+
+def _get_system_id(req):
+    """ Retrieves the system id either from cache, from properties file
+    or from the application server if the request is for a branding repository. """
+    system_id = None
+
+    # The only caching we do of the system id is at the request scope since there is
+    # no way to tell if a cached system id is valid without retrieving the system id.
+    # that being said, if there is no system_id attribute for the request object, we
+    # will always read it from the <repo_root>/.scm.properties file or call back to
+    # the application server if the repositoy is a branding repo
+    try:
+        if req.uri.startswith(BRANDING_REPOSITORY_PATH):
+            # This is a branding repo, get the external system id from ScmListener
+            scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+            key = SourceForge.createScmRequestKey()
+            system_id = scm.getBrandingExternalSystemId(key)
+        else:
+            # This is a regular Subversion repository, load it's .scm.properties file
+            repoBase = SourceForge.get('subversion.repository_base')
+            SourceForge.load(repoBase + "/.scm.properties")
+            system_id = SourceForge.get('external_system_id')
+    except Exception, inst:
+        raise LookupError('Failed to get external system id: ' + inst.__str__())
+
+    return system_id
+
+# _get_system_id()
+
+def _debug(req, msg):
+   """ Write an entry to the Apache error log. """
+   req.log_error('[scm debug] %s' % msg)
+
+# _debug()
