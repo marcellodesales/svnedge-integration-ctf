@@ -182,8 +182,8 @@ public abstract class AbstractCommandExecutor implements CommandExecutor {
      * getEnvironmentSetCommand()
      * getPathSeparator()
      * getFileSepartor()
-     * getArgumentPrefix()
      * getHookScriptFile()
+     * replaceArguments()
      * </code>
      * @see com.vasoftware.sf.externalintegration.execution.CommandExecutor#createHookScript(String, com.vasoftware.sf.externalintegration.execution.CommandExecutor.HookEvent, String)
      * @param repositoryDir the repo whose hooks script to modify
@@ -230,7 +230,7 @@ public abstract class AbstractCommandExecutor implements CommandExecutor {
         // update script command for platform
         // assume "python" is on path
         scriptContent = scriptContent.replaceAll("/", getFileSeparator());
-        scriptContent = scriptContent.replaceAll("\\$", getArgumentPrefix());
+        scriptContent = replaceArguments(scriptContent);
 
         script.append(scriptContent);
         script.append("\n");
@@ -256,7 +256,7 @@ public abstract class AbstractCommandExecutor implements CommandExecutor {
 
     protected abstract String getFileSeparator();
 
-    protected abstract String getArgumentPrefix();
+    protected abstract String replaceArguments(String scriptContent);
 
     protected abstract File getHookScriptFile(String repositoryDir, HookEvent hook);
 

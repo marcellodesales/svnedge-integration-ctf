@@ -977,11 +977,11 @@ public class UnixCommandExecutor extends AbstractCommandExecutor implements Comm
     }
 
     /**
-     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#getArgumentPrefix()
+     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#replaceArguments()
      */
     @Override
-    protected String getArgumentPrefix() {
-        return "\\$";
+    protected String replaceArguments(String scriptContent) {
+        return scriptContent;
     }
 
     /**

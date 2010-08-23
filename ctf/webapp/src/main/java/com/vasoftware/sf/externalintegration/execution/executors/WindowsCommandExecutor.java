@@ -267,11 +267,11 @@ public class WindowsCommandExecutor extends AbstractCommandExecutor implements C
     }
 
     /**
-     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#getArgumentPrefix()
+     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#replaceArguments()
      */
     @Override
-    protected String getArgumentPrefix() {
-        return "%";
+    protected String replaceArguments(String scriptContent) {
+        return scriptContent.replaceAll("\"\\$(\\d+)\"", "%$1");
     }
 
     /**

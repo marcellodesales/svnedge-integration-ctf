@@ -264,9 +264,9 @@ public class SubversionWrapper {
         // Create REPO_HOME/hooks/post-commit that calls SOURCEFORGE_HOME/integration/post-commit.py
         postCommitContent.append(sfCommandPrefix)
         .append(pythonExecutable)
-        .append(" ")        
+        .append(" \"")        
         .append(sfIntegrationsRoot)
-        .append("/post-commit.py \"$1\" \"$2\" ")
+        .append("/post-commit.py\" \"$1\" \"$2\" ")
         .append(systemId)
         .append("\n")
         .append(sfCommandSuffix);
@@ -274,9 +274,9 @@ public class SubversionWrapper {
         if (repositoryDir.startsWith(brandingRepo)) {
             postCommitContent.append(sfCommandPrefix)
             .append(pythonExecutable)
-            .append(" ")  
+            .append(" \"")  
             .append(sfIntegrationsRoot)
-            .append("/data-checkout.py \"$1\" \"$2\" ")
+            .append("/data-checkout.py\" \"$1\" \"$2\" ")
             .append(systemId)
             .append("\n")
             .append(sfCommandSuffix);
@@ -294,9 +294,9 @@ public class SubversionWrapper {
             
             // Create REPO_HOME/hooks/pre-commit that calls SOURCEFORGE_HOME/integration/pre-commit.py
             preCommitContent.append(pythonExecutable)
-            .append(" ")                      
+            .append(" \"")                      
             .append(sfIntegrationsRoot)
-            .append("/pre-commit.py \"$1\" \"$2\" ")
+            .append("/pre-commit.py\" \"$1\" \"$2\" ")
             .append(systemId)
             .append("\n");
 
@@ -306,9 +306,9 @@ public class SubversionWrapper {
    
         // Create REPO_HOME/hooks/pre-revprop-change that calls SOURCEFORGE_HOME/integration/pre-revprop-change.py
         preRevpropChangeContent.append(pythonExecutable)
-        .append(" ")     
+        .append(" \"")     
         .append(sfIntegrationsRoot)
-        .append("/pre-revprop-change.py ")
+        .append("/pre-revprop-change.py\" ")
         .append("\"$1\" ")
         .append("\"$2\" ")
         .append("\"$3\" ")
