@@ -156,7 +156,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
-            <version>LATEST</version>
             <executions>
               <execution>
                 <id>fix-windows-paths</id>
@@ -192,7 +191,6 @@
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <version>LATEST</version>
             <executions>
               <execution>
                 <id>install-viewvc</id>
@@ -234,7 +232,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-resources-plugin</artifactId>
-            <version>LATEST</version>
             <executions>
               <execution>
                 <id>copy-viewvc-ctf-mod_python-handler</id>
@@ -352,7 +349,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
-            <version>LATEST</version>
             <executions>
               <execution>
                 <id>prepare-filesystem</id>
