@@ -343,7 +343,7 @@ def _create_sf_auth_cookie(req, js, us):
   # have this less elegant approach.
   if _is_https(req):
     # Create a secure cookie
-    sf_auth = Cookie.Cookie(SFAUTH_COOKIE_NAME, '%s&%s' % (us, js), path='/', secure=secure)
+    sf_auth = Cookie.Cookie(SFAUTH_COOKIE_NAME, '%s&%s' % (us, js), path='/', secure=True)
   else:
     # Create a cookie
     sf_auth = Cookie.Cookie(SFAUTH_COOKIE_NAME, '%s&%s' % (us, js), path='/')
