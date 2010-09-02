@@ -23,10 +23,26 @@ DEBUG = False
 BRANDING_REPOSITORY_PATH = "/svn/repository-branding"
 SVN_SPECIAL_URI = "!svn"
 
+# Having a cache is imperative for performance. The following settings
+# can be configured to optimize throughput and performance for Subversion
+# on your site.
 CACHE = dict()
 CACHE_ENABLED = True
-CACHE_TIMEOUT = 120
-MAX_CACHE_ENTRIES = 10
+# Apart from generally having a time out for a cache entry, the following
+# translates to the amount of time a user who has already been cached and is
+# using a Subversion client will wait before its affected by permission
+# changes applied on the application that pertain to it.
+# On the other hand, increasing this timeout has a direct impact on performance
+# and scalability because more users can be cached for longer.
+# This is in seconds.
+CACHE_TIMEOUT = 180 
+# This setting has a significant impact on the performance of Subversion.
+# The higher its value the more time and effort is saved fetching for permissions.  
+# Beware, increasing this also increases (as a mulitple) the amount of memory
+# Apache threads will be holding on to until items are taken out of the cache.
+MAX_CACHE_ENTRIES = 100
+
+
 ENTRY_NOT_FOUND = '!!!NOTFOUND!!!'
 
 # Below is a tuple of known access types.
@@ -608,13 +624,22 @@ def _remove_from_cache(req):
 
 # _remove_from_cache()
 
-def _clear_cache(req):
-    """ Removes all cache entries. """
+def _remove_oldest_cache_entry(req):
+    """ Removes oldest entry in the cache to make way for a new entry. """
     global CACHE
 
-    CACHE = dict()
+    # The cache entries are in the form: 
+    #   {'exsy1017:foobar:user1': {'timestamp': datetime.datetime(2010, 7, 29, 11, 27, 43, 631206), ...
+    # The following will generate a list with deail about the oldest cache entry, in the form:
+    #   [datetime.datetime(2010, 7, 29, 11, 27, 41, 283748), 'exsy1017:foobar:user1']
+    oldest = min([[CACHE[v]['timestamp'], v] for v in CACHE.keys()])
+    # Take out the oldest entry in the cache
+    del CACHE[oldest[1]]
 
-# _clear_cache()
+    if DEBUG:
+        _debug(req, 'Removed least used cache entry: [%s, %s]' % (oldest[1],oldest[0]))
+
+# _remove_oldest_cache_entry()
 
 def _prepare(req):
     """ This function looks at the request and does some processing to
@@ -669,7 +694,9 @@ def _prepare(req):
         if DEBUG:
             _debug(req, 'Clearing cache as the cache has reached the maximum number of entries (%d)' % MAX_CACHE_ENTRIES)
 
-        _clear_cache(req)
+        # The cache is full, but we only need to make room if this is something not already cached.
+        if not CACHE.has_key(req.cache_key): 
+            _remove_oldest_cache_entry(req)
 
     # If there is already a cache entry for this system:repo:user:conn, remove it if it's stale.
     cache_entry_timestamp = _get_from_cache(req, 'timestamp')
