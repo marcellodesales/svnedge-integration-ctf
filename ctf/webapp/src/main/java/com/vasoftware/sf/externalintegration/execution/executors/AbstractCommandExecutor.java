@@ -208,20 +208,15 @@ public abstract class AbstractCommandExecutor implements CommandExecutor {
         script.append(getCommentString() + " " + BEGIN_SOURCEFORGE_SECTION);
         script.append("\n\n");
 
-        script.append(getEnvironmentSetCommand());
-        script.append(" SOURCEFORGE_PROPERTIES_PATH=")
-        .append(quoteStr)
-        .append(FileUtil.normalizePath(sfPropertiesPath))
-        .append(quoteStr)
-        .append("\n");
+        script.append(getEnvironmentVariableString("SOURCEFORGE_PROPERTIES_PATH",
+                quoteStr + FileUtil.normalizePath(sfPropertiesPath) + quoteStr));
+        script.append("\n");
+
         if (null != pythonPath) {
             // update path string for platform, then add to script
-            script.append(getEnvironmentSetCommand());
-            script.append(" PYTHONPATH=")
-            .append(quoteStr)
-            .append(FileUtil.normalizePath(pythonPath))
-            .append(quoteStr)
-            .append("\n\n");
+            script.append(getEnvironmentVariableString("PYTHONPATH",
+                quoteStr + FileUtil.normalizePath(pythonPath) + quoteStr));
+            script.append("\n\n");
         } else {
             // For pretty scripts
             script.append("\n");
@@ -250,7 +245,13 @@ public abstract class AbstractCommandExecutor implements CommandExecutor {
 
     protected abstract String getCommentString();
 
-    protected abstract String getEnvironmentSetCommand();
+    /**
+     * returns the platform-specific set-variable snippet
+     * @param variableName name to use
+     * @param value value to assign
+     * @return the snippet to include in the shell script
+     */
+    protected abstract String getEnvironmentVariableString(String variableName, String value);
 
     protected abstract String getPathSeparator();
 

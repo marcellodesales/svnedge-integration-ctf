@@ -953,11 +953,18 @@ public class UnixCommandExecutor extends AbstractCommandExecutor implements Comm
     }
 
     /**
-     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#getEnvironmentSetCommand()
+     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#getEnvironmentVariableString
      */
     @Override
-    protected String getEnvironmentSetCommand() {
-        return "export";
+    protected String getEnvironmentVariableString(String name, String value) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(name)
+                .append("=")
+                .append(value)
+                .append("\n")
+                .append("export ")
+                .append(name);
+        return sb.toString();
     }
 
     /**
@@ -977,7 +984,7 @@ public class UnixCommandExecutor extends AbstractCommandExecutor implements Comm
     }
 
     /**
-     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#replaceArguments()
+     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#replaceArguments
      */
     @Override
     protected String replaceArguments(String scriptContent) {

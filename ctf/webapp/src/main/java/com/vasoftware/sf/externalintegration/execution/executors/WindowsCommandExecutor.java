@@ -243,11 +243,16 @@ public class WindowsCommandExecutor extends AbstractCommandExecutor implements C
     }
 
     /**
-     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#getEnvironmentSetCommand()
+     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#getEnvironmentVariableString
      */
     @Override
-    protected String getEnvironmentSetCommand() {
-        return "SET";
+    protected String getEnvironmentVariableString(String name, String value) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SET ")
+                .append(name)
+                .append("=")
+                .append(value);
+        return sb.toString();
     }
 
     /**
@@ -267,7 +272,7 @@ public class WindowsCommandExecutor extends AbstractCommandExecutor implements C
     }
 
     /**
-     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#replaceArguments()
+     * @see com.vasoftware.sf.externalintegration.execution.executors.AbstractCommandExecutor#replaceArguments
      */
     @Override
     protected String replaceArguments(String scriptContent) {
