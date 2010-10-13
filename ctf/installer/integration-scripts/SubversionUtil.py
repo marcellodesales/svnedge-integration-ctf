@@ -195,31 +195,20 @@ class SVNLook:
     if differ.either_binary():
         diff.write("(Binary file differs)\n")
     else:
-        try:
-            pobj = differ.get_pipe()
+        # not using differ.get_pipe() as that delegates to the native diff
+        # binary.  Solaris diff does not support labels.
+        file1_path, file2_path = differ.get_files()
+        file1 = open(file1_path, "r")
+        file2 = open(file2_path, "r")
+        diff_lines = difflib.unified_diff(file1.readlines(), file2.readlines(),
+             label, label, "\t(original)", "\t(new)")
 
-            while 1:
-                line = pobj.readline()
+        file1.close()
+        file2.close()
+        # File removal is handled by repos.FileDiff
 
-                if not line:
-                    break
-
-                diff.write(line)
-        except OSError:
-            # Assume this is due to 'diff' not found on PATH, which repos.FileDiff uses
-            file1_path, file2_path = differ.get_files()
-            file1 = open(file1_path, "r")
-            file2 = open(file2_path, "r")
-            diff_lines = difflib.unified_diff(file1.readlines(), file2.readlines(), label, label, "\t(original)",
-                                              "\t(new)")
-
-            file1.close()
-            file2.close()
-
-            # File removal is handled by repos.FileDiff
-
-            for line in diff_lines:
-                diff.write(line)
+        for line in diff_lines:
+            diff.write(line)
 
     diff.write("\n")
 
