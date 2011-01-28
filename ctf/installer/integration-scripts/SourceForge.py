@@ -111,7 +111,7 @@ def getSOAPServiceUrl(serviceName, soapVer = ''):
 
         appserverUrl = proto + "://" + host + ":" + port + "/ce-soap" + soapVer + "/services/" + serviceName
     else:
-        appserverUrl = proto + "://" + host + ":" + port + "/sf-soap" + soapVer + "/services/" + serviceName
+        appserverUrl = proto + "://" + host + ":" + port + "/ce-soap50" + soapVer + "/services/" + serviceName
     return appserverUrl
 
 def getIntegrationServerUrl():
