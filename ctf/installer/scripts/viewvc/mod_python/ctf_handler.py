@@ -45,7 +45,7 @@ def handler(req):
   _configure_environment(req)
   _prepare(req)
   _verify_session(req)
-  _prepare_viewvc(req)
+  sf_header = _prepare_viewvc(req)
   # End TeamForge Logic
 
   try:
@@ -57,7 +57,7 @@ def handler(req):
 
   req.add_common_vars()
 
-  module.index(req)
+  module.index(req, sf_header)
 
   return apache.OK
 
@@ -302,8 +302,6 @@ def _prepare_viewvc(req):
   os.environ['SCM_PARENT_PATH'] = req.repo_root
   os.environ['SCM_TYPE'] = req.scm_type
   os.environ['HTTP_USER_AGENT'] = req.headers_in['User-Agent']
-  os.environ['SF_HEADER'] = urllib.quote_plus(sf_header)
-
   req.subprocess_env['REMOTE_USER'] = req.username
 
   if req.get_options().has_key('viewvc.root.uri'):
@@ -314,6 +312,8 @@ def _prepare_viewvc(req):
 
     # Hack the PATH_INFO to be the request url minus the Apache Location directive URI
     req.subprocess_env['PATH_INFO'] = req.subprocess_env['SCRIPT_URL'][len(viewvc_root_uri):]
+
+  return sf_header
 
 # _prepare_viewvc()
 

@@ -135,11 +135,6 @@ class Request:
         app_server_root_url = ''
     self.cfg.general.ctf_app_server_root_url = app_server_root_url
 
-    # Get the SF_HEADER stuff
-    sf_header = re.sub(r'%[0-9A-Fa-f][0-9A-Fa-f]', jigger_sf_header,
-                       string.replace(os.environ.get('SF_HEADER'), "+", " "))
-    self.cfg.general.ctf_header = sf_header
-
     ### -- End TeamForge customizations to 'cfg' --
     
     self.script_name = _normalize_path(server.getenv('SCRIPT_NAME', ''))
@@ -1550,15 +1545,6 @@ def common_template_data(request, revision=None, mime_type=None):
                                                  'file_match': 'exact'},
                                          escape=1)
   return data
-
-def jigger_sf_header(matchObject):
-  return unhexlify(matchObject.group()[1:])
-
-def unhexlify(s):
-  array = []
-  for i in range(0, len(s), 2):
-    array.append(chr(string.atoi(s[i:i+2], 16)))
-  return string.join(array, '')
 
 def retry_read(src, reqlen=CHUNK_SIZE):
   while 1:

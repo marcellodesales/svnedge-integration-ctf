@@ -53,9 +53,12 @@ finally:
   if fp:
     fp.close()
 
-def index(req):
+def index(req, header_html = None):
   server = sapi.ModPythonServer(req)
   cfg = viewvc.load_config(CONF_PATHNAME, server)
+  if header_html:
+    cfg.general.ctf_header = header_html
+
   try:
     viewvc.main(server, cfg)
   finally:
