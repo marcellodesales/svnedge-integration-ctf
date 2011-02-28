@@ -38,6 +38,7 @@ KNOWN_SCM_ADAPTER_TYPE_NAMES = {
 
 def handler(req):
   """ mod_python publisher handler.  (Script entry point.) """
+
   # Begin TeamForge Logic
   if DEBUG:
     req.log_error('[viewvc] Request: (%s) %s' % (req.method, req.unparsed_uri))
@@ -81,6 +82,9 @@ def _prepare(req):
   if req.args is not None:
     query_params = util.parse_qs(req.args)
 
+  # Put the parsed query params into the request object
+  req.query_params = query_params
+
   # If the request has the js and us query parameters, create the sf_auth
   # cookie and then redirect back to the same url minus the js and us query
   # parameters.
@@ -118,7 +122,7 @@ def _verify_session(req):
   back to TeamForge with an error code that TeamForge will use in
   handling the request. This function will also stuff the ViewVC viewer
   information into the session upon successful session verification. """
-  query_params = util.parse_qs(req.args)
+  query_params = req.query_params
   root = None
   system_id = None
 
@@ -247,10 +251,7 @@ def _redirect_to_ctf_error_page(req, code):
 def _get_return_to_url(req):
   """ Returns the url to return back to when redirecting back to TeamForge. """
   query_string = ''
-  query_params = {}
-
-  if req.args is not None:
-    query_params = util.parse_qs(req.args)
+  query_params = req.query_params
 
   for (key, value) in query_params.iteritems():
     if key == 'js' or key == 'us':
