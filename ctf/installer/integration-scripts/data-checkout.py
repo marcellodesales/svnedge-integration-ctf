@@ -82,6 +82,15 @@ def main( ):
         group=SourceForge.getRequired("httpd.group")
         os.system("chown -R %s:%s %s" % (user,group,chkout_dir))
 
+
+    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    try:
+        key = SourceForge.createScmRequestKey()
+        scm.clearBrandingOverrideCache(key)
+    except Exception, inst:
+        import traceback
+        traceback.print_tb(sys.exc_info()[2], None, None)
+        return 1
  
 if __name__ == '__main__':
     main( )

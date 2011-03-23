@@ -1,11 +1,14 @@
 #!/usr/bin/env python2
 
 # SourceForge(r) Enterprise Edition
-# Copyright 2007-2010 CollabNet, Inc.  All rights reserved.
+# Copyright 2007-2011 CollabNet, Inc.  All rights reserved.
 # http://www.collab.net
 #
-# This file contains an authorization method, authenhandler(), which can
-# used as an apache authentication method.
+# This file contains an authentication and an authorization handler
+# for Apache to be used via mod_python.  Right now, our mod_python
+# configuration only utilizes the authentication directly with the
+# authorization handler being invoked when the authentication
+# handler succeeds.
 
 import datetime
 import os
@@ -20,7 +23,6 @@ from urlparse import urlparse
 
 DEBUG = False
 
-BRANDING_REPOSITORY_PATH = "/svn/repository-branding"
 SVN_SPECIAL_URI = "!svn"
 
 # Having a cache is imperative for performance. The following settings
@@ -289,10 +291,6 @@ def doAuthenhandler(req):
     if DEBUG:
         _debug(req, 'Authenticating %s' % username)
 
-    # Quick return for anonymous user, since it's not supported right now.
-    if username is None or password is None:
-        return apache.HTTP_UNAUTHORIZED
-
     # Prepare to handle the request
     _prepare(req)
 
@@ -316,7 +314,10 @@ def doAuthenhandler(req):
 
         try:
             key = SourceForge.createScmRequestKey()
-            response = scm.isValidUser(key, username, password)
+            if int(SourceForge.getDefaultSoapVersion()) < 60:
+                response = scm.isValidUser(key, username, password)
+            else:
+                response = scm.isValidUser(key, username, password, req.system_id, req.repo_name)
 
             if response == 0:
                 is_valid_user = True
@@ -748,7 +749,8 @@ def _get_system_id(req):
     # will always read it from the <repo_root>/.scm.properties file or call back to
     # the application server if the repositoy is a branding repo
     try:
-        if req.uri.startswith(BRANDING_REPOSITORY_PATH):
+        branding_uri = SourceForge.get('subversion_branding.repository_uri')
+        if branding_uri and req.uri.startswith(branding_uri):
             # This is a branding repo, get the external system id from ScmListener
             scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
             key = SourceForge.createScmRequestKey()

@@ -84,4 +84,7 @@ public class GlobalOptionKeys {
     /* WANDisco related keys */
     public static final String SFMAIN_WANDISCO_CVS_PREFIX = "sfmain.integration.wandisco.cvs";
     public static final String SFMAIN_WANDISCO_SUBVERSION_PREFIX = "sfmain.integration.wandisco.subversion";
+
+    /** Key to specify the Display Timezone */
+    public static final String DISPLAY_TIMEZONE = "ctf.displayTimezone";
 }

@@ -16,6 +16,8 @@ public class SoapPermissionsCallbackImpl implements ScmPermissionsCallback {
     private static final Logger smLogger = Logger.getLogger(SoapPermissionsCallbackImpl.class);
     private String mWebAppInternalUrl = null;
 
+    private String mSoapNamespace = null;
+
     /**
      * Constructor.
      *
@@ -35,7 +37,8 @@ public class SoapPermissionsCallbackImpl implements ScmPermissionsCallback {
         String[] perms = null;
 
         try {
-            soapHelper = new SoapClientHelper(mWebAppInternalUrl + "/sf-soap/services/ScmListener");
+            soapHelper = new SoapClientHelper(mWebAppInternalUrl +
+                getSoapNamespace() + "/services/ScmListener");
 
             smLogger.info("ScmListener.getRolePaths(" + username + ", " + systemId + ", " + repositoryName + ")");
 
@@ -46,5 +49,20 @@ public class SoapPermissionsCallbackImpl implements ScmPermissionsCallback {
         }
 
         return perms;
+    }
+
+    private String getSoapNamespace() {
+        if (null == mSoapNamespace) {
+            try {
+                SoapClientHelper soapHelper = new SoapClientHelper(mWebAppInternalUrl + 
+                    "/ce-soap60/services/CollabNet");
+                soapHelper.invoke("getApiVersion", null);
+                mSoapNamespace = "/ce-soap60";
+            } catch (Exception e) {
+                mSoapNamespace = "/sf-soap";
+                smLogger.debug("Assuming pre-6.0 API version; " + e.getMessage());
+            }
+        }
+        return mSoapNamespace;
     }
 }

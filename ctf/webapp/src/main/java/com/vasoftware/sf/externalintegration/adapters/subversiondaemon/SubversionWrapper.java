@@ -55,7 +55,7 @@ public class SubversionWrapper {
         final SfGlobalOptions options = SfGlobalOptionsManager.getOptions();
         mSubversionBinary = options.getOption(GlobalOptionKeys.SFMAIN_INTEGRATION_EXECUTABLES_SUBVERSION);
         mSubversionAdminBinary = options.getOption(GlobalOptionKeys.SFMAIN_INTEGRATION_EXECUTABLES_SUBVERSION_ADMIN);
-        mSubversionFsType = options.getOption(GlobalOptionKeys.SFMAIN_INTEGRATION_SUBVERSION_FS_TYPE);
+        mSubversionFsType = "fsfs";
         mSubversionLookBinary = options.getOption(GlobalOptionKeys.SFMAIN_INTEGRATION_EXECUTABLES_SUBVERSION_LOOK);
         mExecutor = executor;
         mIsWandisco = isWandisco;
@@ -80,7 +80,8 @@ public class SubversionWrapper {
     public CommandResult doVersion() throws CommandWrapperFault {
         final CommandResult result = mExecutor.runCommand(new String[] { mSubversionBinary, "--version" }, null, null);
         if (result.getReturnValue() != CommandResult.RETURN_SUCCESS) {
-            throw new CommandWrapperFault(result.getCommand(), "Could not get version: " + result.getCommandOutput());
+            throw new CommandWrapperFault(result.getCommand(), 
+                "Could not get version: " + result.getCommandOutput());
         }
         return result;
     }
@@ -119,8 +120,8 @@ public class SubversionWrapper {
             return version;
         }
 
-        throw new CommandWrapperFault(mSubversionBinary + " --version", "Could not determine subversion version: "
-                                      + output);
+        throw new CommandWrapperFault(mSubversionBinary + " --version", 
+                                      "Could not determine subversion version: " + output);
     }
 
     /**
@@ -132,20 +133,22 @@ public class SubversionWrapper {
      *             If the repository could not be created
      */
     public void createRepository(final File repositoryDir) throws CommandWrapperFault {
-        final String subversionFsType = (mSubversionFsType != null ? mSubversionFsType : "fsfs");
-        final CommandResult result = mExecutor.runCommand(new String[] { mSubversionAdminBinary, "create",
-                                                                         "--fs-type=" + subversionFsType,
-                                                                         "--pre-1.6-compatible", // This is a workaround
-                                                                         // for
-                                                                         // a Subversion security
-                                                                         // issue and can be removed
-                                                                         // once said issue is fixed.
-                                                                         // (artf49047)
-                                                                         repositoryDir.getAbsolutePath() }, null, null);
+        SfGlobalOptions config = SfGlobalOptionsManager.getOptions();
+        // We should be using 'subversion_branding.repository_base' instead of
+        // 'scm.branding.repo' to determine the branding/remote publishing base
+        // path.. but let's let pass this.. as the setup triggers method uses
+        // the same pattern.. 
+ 
+        String subversionFsType = mSubversionFsType;
+        CommandResult result = mExecutor.runCommand(new String[] { mSubversionAdminBinary,
+            "create", 
+            "--fs-type=" + subversionFsType,
+            repositoryDir.getAbsolutePath() },
+            null, null);
 
         if (result.getReturnValue() != CommandResult.RETURN_SUCCESS) {
             throw new CommandWrapperFault(result.getCommand(), "Could not create repository at "
-                                          + repositoryDir.getAbsolutePath() + ": " + result.getCommandOutput());
+                + repositoryDir.getAbsolutePath() + ": " + result.getCommandOutput());
         }
     }
 
@@ -163,9 +166,7 @@ public class SubversionWrapper {
     public boolean verifyPath(final String repositoryPath, final String repositoryPathFromRoot)
     throws CommandWrapperFault {
         final CommandResult result = mExecutor.runCommandAs(ScmConstants.HTTPD_USER,
-                                                            new String[] { mSubversionLookBinary, "tree",
-                                                                           repositoryPath, repositoryPathFromRoot },
-                                                                           null, false);
+           new String[] { mSubversionLookBinary, "tree", repositoryPath, repositoryPathFromRoot }, null, false);
         return result.getReturnValue() == CommandResult.RETURN_SUCCESS;
     }
 
@@ -241,6 +242,8 @@ public class SubversionWrapper {
     public void setupTriggers(final String systemId, final String repositoryDir) throws CommandWrapperFault {
         final SfGlobalOptions config = SfGlobalOptionsManager.getOptions();
         final String brandingRepo = config.getOption(GlobalOptionKeys.SCM_BRANDING_REPO);
+        int slashIndex = brandingRepo.lastIndexOf('/');
+        final String remotePublishRepo = slashIndex > 0 ? brandingRepo.substring(0, slashIndex) : null;
         final String pythonExecutable = config.getOption(GlobalOptionKeys.SFMAIN_INTEGRATION_EXECUTABLES_PYTHON);
         final String sfIntegrationsRoot = SfPaths.getIntegrationScriptsRootPath();
         final String sfPropertiesPath = SfGlobalOptionsManager.getSourceForgePropertiesPath();
@@ -254,32 +257,46 @@ public class SubversionWrapper {
         if (mIsWandisco) {
             // Guard against trigger execution if hooks copied to non-SFEE WANdisco node
             sfCommandPrefix = new StringBuilder()
-            .append("if [ -f \"")
-            .append(sfPropertiesPath)
-            .append("\" ]; then\n").toString();
+                .append("if [ -f \"")
+                .append(sfPropertiesPath)
+                .append("\" ]; then\n").toString();
 
             sfCommandSuffix = "fi\ntrue\n";
         }
 
         // Create REPO_HOME/hooks/post-commit that calls SOURCEFORGE_HOME/integration/post-commit.py
         postCommitContent.append(sfCommandPrefix)
-        .append(pythonExecutable)
-        .append(" \"")        
-        .append(sfIntegrationsRoot)
-        .append("/post-commit.py\" \"$1\" \"$2\" ")
-        .append(systemId)
-        .append("\n")
-        .append(sfCommandSuffix);
-
-        if (repositoryDir.startsWith(brandingRepo)) {
-            postCommitContent.append(sfCommandPrefix)
             .append(pythonExecutable)
-            .append(" \"")  
+            .append(" \"")        
             .append(sfIntegrationsRoot)
-            .append("/data-checkout.py\" \"$1\" \"$2\" ")
+            .append("/post-commit.py\" \"$1\" \"$2\" ")
             .append(systemId)
             .append("\n")
             .append(sfCommandSuffix);
+
+        // Handle the remote publishing portion of CTF
+        if (null != remotePublishRepo && repositoryDir.startsWith(remotePublishRepo) && 
+                !repositoryDir.equals(brandingRepo)) {
+            postCommitContent.append(sfCommandPrefix)
+	            .append(pythonExecutable)
+                .append(" \"")        
+                .append(sfIntegrationsRoot)
+                .append("/data-publish.py\" \"$1\" \"$2\" ")
+                .append(systemId)
+                .append("\n")
+                .append(sfCommandSuffix);
+        }
+
+        // Handle the branding portion of CTF
+        if (repositoryDir.startsWith(brandingRepo)) {
+            postCommitContent.append(sfCommandPrefix)
+                .append(pythonExecutable)
+                .append(" \"")  
+                .append(sfIntegrationsRoot)
+                .append("/data-checkout.py\" \"$1\" \"$2\" ")
+                .append(systemId)
+                .append("\n")
+                .append(sfCommandSuffix);
         } 
 
         mExecutor.createHookScript(repositoryDir, CommandExecutor.HookEvent.POST_COMMIT, postCommitContent.toString());
@@ -294,11 +311,11 @@ public class SubversionWrapper {
             
             // Create REPO_HOME/hooks/pre-commit that calls SOURCEFORGE_HOME/integration/pre-commit.py
             preCommitContent.append(pythonExecutable)
-            .append(" \"")                      
-            .append(sfIntegrationsRoot)
-            .append("/pre-commit.py\" \"$1\" \"$2\" ")
-            .append(systemId)
-            .append("\n");
+                .append(" \"")                      
+                .append(sfIntegrationsRoot)
+                .append("/pre-commit.py\" \"$1\" \"$2\" ")
+                .append(systemId)
+                .append("\n");
 
             mExecutor.createHookScript(repositoryDir, CommandExecutor.HookEvent.PRE_COMMIT, preCommitContent.toString());
         }
@@ -306,16 +323,16 @@ public class SubversionWrapper {
    
         // Create REPO_HOME/hooks/pre-revprop-change that calls SOURCEFORGE_HOME/integration/pre-revprop-change.py
         preRevpropChangeContent.append(pythonExecutable)
-        .append(" \"")     
-        .append(sfIntegrationsRoot)
-        .append("/pre-revprop-change.py\" ")
-        .append("\"$1\" ")
-        .append("\"$2\" ")
-        .append("\"$3\" ")
-        .append("\"$4\" ")
-        .append("\"$5\" ")
-        .append(systemId)
-        .append("\n");
+            .append(" \"")     
+            .append(sfIntegrationsRoot)
+            .append("/pre-revprop-change.py\" ")
+            .append("\"$1\" ")
+            .append("\"$2\" ")
+            .append("\"$3\" ")
+            .append("\"$4\" ")
+            .append("\"$5\" ")
+            .append(systemId)
+            .append("\n");
 
         mExecutor.createHookScript(repositoryDir, CommandExecutor.HookEvent.PRE_REVPROP_CHANGE, 
                 preRevpropChangeContent.toString());

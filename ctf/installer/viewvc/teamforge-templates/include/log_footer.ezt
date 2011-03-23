@@ -1,7 +1,7 @@
 <hr/>
 <table class="auto">
 <tr>
-  <td>Sticky [is roottype "cvs"]tag[else]revision[end]:</td>
+  <td>Jump to [is roottype "cvs"]tag[else]revision[end]:</td>
   <td>[include "pathrev_form.ezt"]</td>
 </tr>
 

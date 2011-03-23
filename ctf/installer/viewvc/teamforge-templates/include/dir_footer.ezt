@@ -19,7 +19,7 @@
 </tr>
 [end]
 <tr>
-  <td>Sticky [is roottype "cvs"]tag[else]revision[end]:</td>
+  <td>Sticky [is roottype "cvs"]Tag[else]Revision[end]:</td>
   <td>[include "pathrev_form.ezt"]</td>
 </tr>
 

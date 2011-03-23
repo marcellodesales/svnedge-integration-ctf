@@ -1,13 +1,14 @@
-import base64
 import os
-import random
 import string
 import struct
+import random
 import sys
 import time
+import base64
 import urllib
 import urllib2
 import urlparse
+import SOAPpy
 
 _props = {}
 
@@ -25,6 +26,7 @@ else:
 
 # decide japanese character code in string, and convert japanese character code to utf-8.
 # if cannot decide code, kconv does not convert a character code.
+
 def toutf8(txt, log):
     if useKconv:
         log.write("Using kconv to convert encoding")
@@ -98,21 +100,38 @@ def normalizeRepositoryPath(path):
     # CVS workaround
     if path.startswith(':local:'): path = path[7:]
     return os.path.abspath(path)
-    
+
+SOAP_API_DEFAULT_NAMESPACE = ''
+def getDefaultSoapVersion():
+    global SOAP_API_DEFAULT_NAMESPACE
+    if SOAP_API_DEFAULT_NAMESPACE == '':
+        cnSoap = SOAPpy.SOAPProxy(getSOAPServiceUrl("CollabNet", "60"))
+        try:
+            cnSoap.getApiVersion()
+            SOAP_API_DEFAULT_NAMESPACE = "60"
+        except Exception, e:
+            SOAP_API_DEFAULT_NAMESPACE = "50"
+    return SOAP_API_DEFAULT_NAMESPACE
 
 def getSOAPServiceUrl(serviceName, soapVer = ''):
     proto = ["http", "https"] [getBoolean("sfmain.integration.listener_ssl", "false")]
     host = getRequired('sfmain.integration.listener_host')
     port = getRequired('sfmain.integration.listener_port')
 
-    if soapVer != '' and int(soapVer) >= 50:
-        if (serviceName == 'SourceForge'):
-            serviceName = 'CollabNet'
+    if soapVer == '':
+        soapVer = getDefaultSoapVersion()
 
-        appserverUrl = proto + "://" + host + ":" + port + "/ce-soap" + soapVer + "/services/" + serviceName
-    else:
-        appserverUrl = proto + "://" + host + ":" + port + "/ce-soap50" + soapVer + "/services/" + serviceName
-    return appserverUrl
+    if int(soapVer) >= 50 and serviceName == 'SourceForge':
+        serviceName = 'CollabNet'
+
+    soapPrefix = "/ce-soap"
+    if int(soapVer) < 50:
+        soapPrefix = "/sf-soap"
+    elif int(soapVer) == 50 and serviceName == 'ScmListener':
+        soapPrefix = "/sf-soap"
+        soapVer = ''
+
+    return proto + "://" + host + ":" + port + soapPrefix + soapVer + "/services/" + serviceName
 
 def getIntegrationServerUrl():
   """Creates a url to the integration server"""

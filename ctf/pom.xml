@@ -64,6 +64,8 @@
                     <include name="sfauth.py" />
                     <include name="SourceForge.py" />
                     <include name="SubversionUtil.py" />
+                    <include name="data-checkout.py" />
+                    <include name="data-publish.py" />
                   </fileset>
                 </copy>
                 <copy todir="target/integration-scripts/integration/viewvc/lib/vcauth/teamforge">
