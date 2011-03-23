@@ -22,6 +22,7 @@ public class DtdResolver implements EntityResolver {
     public static final String SF_SYSTEM_ID_PREFIX = "http://schema.vasoftware.com/sf/dtd";
     public static final String SFEE50_SYSTEM_ID_PREFIX = "http://schema.open.collab.net/sfee50/dtd";
     public static final String CTF53_SYSTEM_ID_PREFIX = "http://www.open.collab.net/sf/dtd";
+    public static final String ETL_SYSTEM_ID_PREFIX = "http://schema.vasoftware.com/etl/dtd";
 
     /**
      * Empty constructor.
@@ -59,7 +60,7 @@ public class DtdResolver implements EntityResolver {
         // check path
         final String systemIdPrefix = systemId.substring(0, index);
         if (!SF_SYSTEM_ID_PREFIX.equals(systemIdPrefix) && !SFEE50_SYSTEM_ID_PREFIX.equals(systemIdPrefix)
-                && !CTF53_SYSTEM_ID_PREFIX.equals(systemIdPrefix)) {
+                && !CTF53_SYSTEM_ID_PREFIX.equals(systemIdPrefix) && !ETL_SYSTEM_ID_PREFIX.equals(systemIdPrefix)) {
             throw new SAXException("Invalid System ID: " + systemId);
         }
 

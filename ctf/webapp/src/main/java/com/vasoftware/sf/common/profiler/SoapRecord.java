@@ -31,22 +31,20 @@ import com.vasoftware.sf.common.util.StringUtil;
  */
 @SuppressWarnings("unchecked")
 public class SoapRecord {
+
     private static final Logger smLogger = Logger.getLogger(SoapRecord.class);
     /** a count of how many pages are currently being actively processed */
     private static int smCurrentActivePageCount = 0;
     /** Synchronization lock for the counter. */
     private static Object smCounterLock = new Object();
-
     /** How many milliseconds before a call is considered "long" */
     private static final int LONG_CALL_DURATION = 4000;
     /** Maximum number of soap request records to keep around */
     private static final int MAX_ACTVITY_LOG_COUNT = 1000;
     /** Session activity records. */
     private static LinkedList smActivityRecords = new LinkedList();
-
     /** This stores the current soap request record being tracked */
     private static final ThreadLocal SOAP_RECORD = new ThreadLocal();
-
     /** The soap request profile object. */
     private final SoapRequestProfile mSoapRequest;
     private static final String UNKNOWN_OPERATION_NAME = "Unknown";

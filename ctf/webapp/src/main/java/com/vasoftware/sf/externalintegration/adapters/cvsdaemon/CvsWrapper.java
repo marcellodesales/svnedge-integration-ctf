@@ -510,24 +510,24 @@ public class CvsWrapper {
 
         // Create CVSROOT/verifymsg that calls SOURCEFORGE_HOME/integration/VerifyMsg.py
         verifyMsgContent.append(sfPrefix)
-        .append("export SOURCEFORGE_PROPERTIES_PATH='")
-        .append(sfPropertiesPath)
-        .append("'\n");
+            .append("export SOURCEFORGE_PROPERTIES_PATH='")
+            .append(sfPropertiesPath)
+            .append("'\n");
         if (null != pythonPath) {
             verifyMsgContent.append("export PYTHONPATH='")
-            .append(pythonPath)
-            .append("'\n");
+                .append(pythonPath)
+                .append("'\n");
         }
         verifyMsgContent.append(".*\t")
-        .append(cmdPrefix)
-        .append("python2 ")
-        .append(sfIntegrationsRoot)
-        .append("/VerifyMsg.py ")
-        .append(isWandiscoString)
-        .append(" ")
-        .append(systemId)
-        .append(" %l\n")
-        .append(sfSuffix);
+	    .append(cmdPrefix)
+            .append("python2 ")
+            .append(sfIntegrationsRoot)
+            .append("/VerifyMsg.py ")
+            .append(isWandiscoString)
+            .append(" ")
+            .append(systemId)
+            .append(" %l\n")
+            .append(sfSuffix);
 
         mExecutor.addTriggerToFile(verifymsgInRepository, verifymsgCheckedOut, verifyMsgContent.toString());
 
@@ -536,24 +536,24 @@ public class CvsWrapper {
 
         // Create CVSROOT/loginfo that calls SOURCEFORGE_HOME/integration/LogInfo.py
         logInfoContent.append(sfPrefix)
-        .append("export SOURCEFORGE_PROPERTIES_PATH='")
-        .append(sfPropertiesPath)
-        .append("'\n");
+            .append("export SOURCEFORGE_PROPERTIES_PATH='")
+            .append(sfPropertiesPath)
+            .append("'\n");
         if (null != pythonPath) {
             logInfoContent.append("export PYTHONPATH='")
-            .append(pythonPath)
-            .append("'\n");
+                .append(pythonPath)
+                .append("'\n");
         }
         logInfoContent.append("ALL\t")
-        .append(cmdPrefix)
-        .append("python2 ")
-        .append(sfIntegrationsRoot)
-        .append("/LogInfo.py ")
-        .append(isWandiscoString)
-        .append(" ")
-        .append(systemId)
-        .append(" %{sVv}\n")
-        .append(sfSuffix);
+            .append(cmdPrefix)
+            .append("python2 ")
+            .append(sfIntegrationsRoot)
+            .append("/LogInfo.py ")
+            .append(isWandiscoString)
+            .append(" ")
+            .append(systemId)
+            .append(" %{sVv}\n")
+            .append(sfSuffix);
 
         mExecutor.addTriggerToFile(loginfoInRepository, loginfoCheckedOut, logInfoContent.toString());
 
@@ -562,24 +562,24 @@ public class CvsWrapper {
 
         // Create CVSROOT/commitinfo that calls SOURCEFORGE_HOME/integration/CommitInfo.py
         commitInfoContent.append(sfPrefix)
-        .append("export SOURCEFORGE_PROPERTIES_PATH='")
-        .append(sfPropertiesPath)
-        .append("'\n");
+            .append("export SOURCEFORGE_PROPERTIES_PATH='")
+            .append(sfPropertiesPath)
+            .append("'\n");
         if (null != pythonPath) {
             commitInfoContent.append("export PYTHONPATH='")
-            .append(pythonPath)
-            .append("'\n");
+                .append(pythonPath)
+                .append("'\n");
         }
         commitInfoContent.append("ALL\t")
-        .append(cmdPrefix)
-        .append("python2 ")
-        .append(sfIntegrationsRoot)
-        .append("/CommitInfo.py ")
-        .append(isWandiscoString)
-        .append(" ")
-        .append(systemId)
-        .append(" %r/%p\n")
-        .append(sfSuffix);
+            .append(cmdPrefix)
+            .append("python2 ")
+            .append(sfIntegrationsRoot)
+            .append("/CommitInfo.py ")
+            .append(isWandiscoString)
+            .append(" ")
+            .append(systemId)
+            .append(" %r/%p\n")
+            .append(sfSuffix);
 
         mExecutor.addTriggerToFile(commitinfoInRepository, commitInfoCheckedOut, commitInfoContent.toString());
 
@@ -589,8 +589,8 @@ public class CvsWrapper {
             final File sfeeSh = new File(checkedOutCvsRoot, SFEE_SH);
 
             sfeeShContent.append("#!/bin/bash\nif [ -f \"")
-            .append(sfPropertiesPath)
-            .append("\" ]; then\n  $*\nfi\ntrue");
+                .append(sfPropertiesPath)
+                .append("\" ]; then\n  $*\nfi\ntrue");
 
             mExecutor.createFile(sfeeSh, sfeeShContent.toString());
             mExecutor.setUserOnPath(mCvsUser, sfeeSh);

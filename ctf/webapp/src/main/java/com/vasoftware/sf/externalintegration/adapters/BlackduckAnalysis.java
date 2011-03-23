@@ -228,7 +228,7 @@ public class BlackduckAnalysis implements Runnable {
 
         String soapServerUrl = config.getOption(GlobalOptionKeys.SFMAIN_SOAP_API_SERVER_URL);
 	try {
-	    SoapClientHelper soapHelper = new SoapClientHelper(soapServerUrl + "/sf-soap/services/ScmListener");
+	    SoapClientHelper soapHelper = new SoapClientHelper(soapServerUrl + "/ce-soap60/services/ScmListener");
 
 	    soapHelper.invoke("notifyAnalysisComplete", new Object[]{blackDuckRepositoryId, status});
         } catch (AxisFault e) {

@@ -156,4 +156,14 @@ public abstract class XmlHelper {
             throw new XmlException("Failed parsing XML URL: " + externalForm, e);
         }
     }
+    
+    /**
+     * Returns the attribute of the provided nodeName.
+     * @param element Parent element
+     * @param nodeName the Node Name
+     * @return Attribute Name
+     */
+    public static String getAttribute(Element element, String nodeName) {        
+        return element.getAttribute(nodeName);        
+    }
 }
