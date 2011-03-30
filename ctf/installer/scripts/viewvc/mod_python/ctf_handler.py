@@ -46,7 +46,7 @@ def handler(req):
   _configure_environment(req)
   _prepare(req)
   _verify_session(req)
-  sf_header = _prepare_viewvc(req)
+  _prepare_viewvc(req)
   # End TeamForge Logic
 
   try:
@@ -58,7 +58,7 @@ def handler(req):
 
   req.add_common_vars()
 
-  module.index(req, sf_header)
+  module.index(req, req.java_session)
 
   return apache.OK
 
@@ -296,14 +296,14 @@ def _get_ctf_url(req):
 
 def _prepare_viewvc(req):
   """ Prepares ViewVC for being ran. """
-  return_to_url = _get_return_to_url(req)
-  ctf_url = _get_ctf_url(req)
-  sf_header = _get_sf_header(req, ctf_url, return_to_url)
 
   os.environ['SCM_PARENT_PATH'] = req.repo_root
   os.environ['SCM_TYPE'] = req.scm_type
   os.environ['HTTP_USER_AGENT'] = req.headers_in['User-Agent']
   req.subprocess_env['REMOTE_USER'] = req.username
+  req.subprocess_env['CTF_PROJECT_PATH'] = req.proj_path
+  req.subprocess_env['CTF_BASE_URL'] = _get_ctf_url(req)
+  req.subprocess_env['CTF_RETURN_TO_URL'] = _get_return_to_url(req)
 
   if req.get_options().has_key('viewvc.root.uri'):
     viewvc_root_uri = req.get_options()['viewvc.root.uri']
@@ -314,17 +314,7 @@ def _prepare_viewvc(req):
     # Hack the PATH_INFO to be the request url minus the Apache Location directive URI
     req.subprocess_env['PATH_INFO'] = req.subprocess_env['SCRIPT_URL'][len(viewvc_root_uri):]
 
-  return sf_header
-
 # _prepare_viewvc()
-
-def _get_sf_header(req, ctf_url, return_to_url):
-  """ Calls the topInclude url to get the header contents of CTF. """
-  top_include_url = '%s/sfmain/do/topInclude/%s;jsessionid=%s?base=%s&returnTo=%s&helpTopicId=26' % (ctf_url, req.proj_path, req.java_session, ctf_url[0:ctf_url.rfind('/')], return_to_url)
-
-  return urllib2.urlopen(top_include_url).read().strip()
-
-# _get_sf_header()
 
 def _is_https(req):
   """ Returns whether or not the request was made over https or not. """
