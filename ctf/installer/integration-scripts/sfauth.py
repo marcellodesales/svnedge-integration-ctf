@@ -291,8 +291,19 @@ def doAuthenhandler(req):
     if DEBUG:
         _debug(req, 'Authenticating %s' % username)
 
+    # Quick return for anonymous user, since it's not supported right now.  Note this was
+    # removed in artf53975, but that artifact does not require truly anonymous access. And
+    # if we don't return a 401 result, for lack of username, a windows server will not 
+    # cause the client to prompt for credentials.  (For Linux, it seems the 401 is delivered
+    # further up the stack.)
+    if username is None:  
+        return apache.HTTP_UNAUTHORIZED
+
     # Prepare to handle the request
     _prepare(req)
+
+    if not req.repo_name:
+        return apache.HTTP_UNAUTHORIZED
 
     # Get the authenticated users from cache
     authenticated_users = _get_from_cache(req, 'authenticated_users')
@@ -387,7 +398,10 @@ def __dav_svn_parse_uri(uri_to_split, svn_uri_root):
     uri_parts = uri.split(svn_uri_root, 1)
 
     # Only trim the svn_uri_root from the front if there is more to the uri than the svn_uri_root
-    relative = uri.split(svn_uri_root, 1)[1]
+    relative = uri_parts[1]
+
+    if len(relative) == 0:
+        return (svn_repo_name, svn_repo_path)
 
     # We want a leading slash
     if relative[0] != '/':
@@ -684,6 +698,11 @@ def _prepare(req):
             _debug(req, 'Request: (%s)%s->%s' % (req.user, req.method, req.uri))
             _debug(req, 'Repository name: %s' % repr(repo_name))
             _debug(req, 'Repository path: %s' % repr(repo_path))
+
+    if not req.repo_name:
+        if DEBUG:
+            _debug(req, 'Early return from _prepare due to lack of repo_name')
+        return
 
     if not hasattr(req, 'system_id'):
         req.system_id = _get_system_id(req)
