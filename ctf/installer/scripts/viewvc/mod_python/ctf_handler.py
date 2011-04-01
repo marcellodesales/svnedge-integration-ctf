@@ -244,7 +244,7 @@ def _redirect_to_ctf_error_page(req, code):
   if ctf_url_host != return_to_url_host:
     session_query_params = '&js=%s&us=%s' % (js, us)
 
-  _redirect(req, '%s/scm/do/viewRepositoryError?code=%s&url=%s%s' % (ctf_url, code, urllib.quote_plus(return_to_url), session_query_params))
+  _redirect(req, '%s/scm/do/viewRepositoryError?code=%s&url=%s%s' % (ctf_url, code, urllib.quote(return_to_url), session_query_params))
 
 # _redirect_to_ctf_error_page()
 
@@ -270,7 +270,7 @@ def _get_return_to_url(req):
   # Trim the first character as it's a & and is unnecessary
   query_string = query_string[1:]
 
-  return_to_url = urllib.quote_plus(req.subprocess_env['SCRIPT_URI'], '/:')
+  return_to_url = urllib.quote(req.subprocess_env['SCRIPT_URI'], '/:')
   return_to_url = return_to_url + '?' + query_string
 
   return return_to_url
