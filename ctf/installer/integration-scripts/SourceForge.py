@@ -127,8 +127,10 @@ def getSOAPServiceUrl(serviceName, soapVer = ''):
     soapPrefix = "/ce-soap"
     if int(soapVer) < 50:
         soapPrefix = "/sf-soap"
-    elif int(soapVer) == 50 and serviceName == 'ScmListener':
-        soapPrefix = "/sf-soap"
+    
+    if serviceName == 'ScmListener':
+        if int(soapVer) == 50:
+            soapPrefix = "/sf-soap"
         soapVer = ''
 
     return proto + "://" + host + ":" + port + soapPrefix + soapVer + "/services/" + serviceName
