@@ -12,6 +12,7 @@ from suds import WebFault
 from suds.client import Client
 from urlparse import urlparse
 import os
+import SOAPpy
 import SourceForge
 import string
 import sys
@@ -313,6 +314,25 @@ def _prepare_viewvc(req):
 
     # Hack the PATH_INFO to be the request url minus the Apache Location directive URI
     req.subprocess_env['PATH_INFO'] = req.subprocess_env['SCRIPT_URL'][len(viewvc_root_uri):]
+
+    # CollabNet TeamForge customization
+    os.environ['CTF_TIMEZONE'] = SourceForge.get('ctf.displayTimezone', '');
+    try:
+        if int(SourceForge.getDefaultSoapVersion()) >= 60:
+            scm_listener_url = SourceForge.getSOAPServiceUrl('PluggableApp')
+            req.log_error('scm_listener_url: %s user_session: %s' % (scm_listener_url, req.user_session))
+            scm = Client('%s?wsdl' % scm_listener_url, location=scm_listener_url)
+            prefixes = scm.service.getIntegratedAppPrefixes(req.user_session)
+            if len(prefixes) > 0:
+                regexSnippet = ''
+                for prefix in prefixes:
+                    regexSnippet = regexSnippet + '|' + str(prefix) + '_'
+          
+                # Case-insensitive matches
+                regexSnippet = '(?i)' + regexSnippet + r'(\w+)'
+                os.environ['INTEGRATED_APP_PREFIXES'] = regexSnippet
+    except Exception, e:
+        req.log_error('[viewvc] Exception when calling getIntegratedAppPrefixes: %s' % str(e))
 
 # _prepare_viewvc()
 
