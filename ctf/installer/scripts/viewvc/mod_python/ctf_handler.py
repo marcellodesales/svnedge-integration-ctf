@@ -320,7 +320,6 @@ def _prepare_viewvc(req):
     try:
         if int(SourceForge.getDefaultSoapVersion()) >= 60:
             scm_listener_url = SourceForge.getSOAPServiceUrl('PluggableApp')
-            req.log_error('scm_listener_url: %s user_session: %s' % (scm_listener_url, req.user_session))
             scm = Client('%s?wsdl' % scm_listener_url, location=scm_listener_url)
             prefixes = scm.service.getIntegratedAppPrefixes(req.user_session)
             if len(prefixes) > 0:
