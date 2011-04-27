@@ -5,6 +5,7 @@
  */
 package com.vasoftware.sf.externalintegration;
 
+import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Locale;
@@ -39,19 +40,10 @@ public class BootstrapServlet extends HttpServlet {
     public void init(final ServletConfig config) throws ServletException {
         super.init(config);
 
-        if (smLogger.isInfoEnabled()) {
-            smLogger.info("*** Begin Bootstrap Process ***");
-        }
+        File appHome = new File(new File(".").getAbsoluteFile().getParentFile().getParentFile(), "");
+        smLogger.info("Bootstrapping the Integration server for Subversion Edge at " + appHome);
 
-        if (smLogger.isInfoEnabled()) {
-            smLogger.info("*** Loading Sourceforge Global Options ***");
-        }
-
-        if (smLogger.isInfoEnabled()) {
-            smLogger.info("*** Setting system default locale ***");
-        }
-
-        // The default locale for the whole system should be "en".
+        smLogger.debug("*** Setting system default locale ***");
         Locale.setDefault(new Locale("en"));
 
         final String urlString = config.getInitParameter("apiProtocolUrl");
@@ -71,8 +63,6 @@ public class BootstrapServlet extends HttpServlet {
 
         ApiProtocolManager.init(apiProtocol);
 
-        if (smLogger.isInfoEnabled()) {
-            smLogger.info("*** End Bootstrap Process ***");
-        }
+        smLogger.debug("*** TeamForge Integration service loaded ***");
     }
 }

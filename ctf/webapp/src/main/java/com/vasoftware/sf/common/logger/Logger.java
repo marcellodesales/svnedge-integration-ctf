@@ -6,7 +6,13 @@
 
 package com.vasoftware.sf.common.logger;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+
+import org.apache.log4j.Level;
+
+import com.vasoftware.sf.externalintegration.BootstrapServlet;
 
 /**
  * The <code>Logger</code> class provides an abstract implementation for logging.
@@ -64,13 +70,28 @@ public class Logger {
     }
 
     /**
+     * Logs the given message in the standard out in a given level with a tag "INTEGRATION" in the place of the
+     * running class.
+     * @param message is the message to be logged.
+     * @param level is the level to be used.
+     * @param a given parameter.
+     */
+    private static void logToSystemOut(String message, Level level, Throwable throwable) {
+        System.out.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:S").format(new Date()) + " "+ 
+                level.toString() + " [INTEGRATION] - " + message);
+        if (throwable != null) {
+            throwable.printStackTrace(System.out);
+        }
+    }
+
+    /**
      * Log a message with DEBUG priority
      * 
      * @param message
      *            DEBUG message to be logged
      */
     public void debug(final String message) {
-        mWrapped.debug(message);
+        logToSystemOut(message, Level.DEBUG, null);
     }
 
     /**
@@ -80,7 +101,7 @@ public class Logger {
      *            ERROR message to be logged
      */
     public void error(final String message) {
-        mWrapped.error(message);
+        logToSystemOut(message, Level.ERROR, null);
     }
 
     /**
@@ -92,7 +113,7 @@ public class Logger {
      *            throwable about which information will be logged
      */
     public void error(final String message, final Throwable t) {
-        mWrapped.error(message, t);
+        logToSystemOut(message, Level.ERROR, t);
     }
 
     /**
@@ -103,7 +124,7 @@ public class Logger {
      * @param t throwable about which information will be logged
      */
     public void fatal(String message, Throwable t) {
-        mWrapped.fatal(message, t);
+        logToSystemOut(message, Level.FATAL, null);
     }
 
     /**
@@ -113,7 +134,7 @@ public class Logger {
      *            INFO message to be logged
      */
     public void info(final String message) {
-        mWrapped.info(message);
+        logToSystemOut(message, Level.INFO, null);
     }
 
     /**
@@ -123,7 +144,7 @@ public class Logger {
      *            WARNING message to be logged
      */
     public void warn(final String message) {
-        mWrapped.warn(message);
+        logToSystemOut(message, Level.WARN, null);
     }
 
     /**
@@ -135,7 +156,7 @@ public class Logger {
      *            throwable about which information will be logged
      */
     public void warn(final String message, final Throwable t) {
-        mWrapped.warn(message, t);
+        logToSystemOut(message, Level.WARN, t);
     }
 
     /**
