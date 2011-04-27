@@ -6,13 +6,15 @@
 
 package com.vasoftware.sf.common.logger;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
+import java.util.Properties;
+import java.util.Set;
 
 import org.apache.log4j.Level;
-
-import com.vasoftware.sf.externalintegration.BootstrapServlet;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.PropertyConfigurator;
 
 /**
  * The <code>Logger</code> class provides an abstract implementation for logging.
@@ -59,6 +61,56 @@ public class Logger {
     }
 
     /**
+     * @return The list of loggers currently configured.
+     */
+    private static synchronized Set<String> getLoggerNamesSet() {
+        return smLoggerMap.keySet();
+    }
+
+    /**
+     * Sets the level of a given loggerName.
+     * @param loggerName is an existing logger name.
+     * @param level is the level to be used.
+     */
+    private static synchronized void setLevel(String loggerName, Level level) {
+        Logger logger = getLogger(loggerName);
+        org.apache.log4j.Logger log4jLogger = null;
+        if (logger != null) {
+            log4jLogger = org.apache.log4j.Logger.getLogger(loggerName);
+        } else {
+            log4jLogger = org.apache.log4j.Logger.getRootLogger();
+        }
+        log4jLogger.setLevel(level);
+    }
+
+    /**
+     * Updates the current logger levels to the given one.
+     * @param level is the log4j logger level to be used.
+     */
+    public static synchronized void updateLoggerLevel(Level level) {
+        if (level == null) {
+            throw new IllegalArgumentException("The log level must be provided.");
+        }
+        for(String loggerName : getLoggerNamesSet()) {
+            setLevel(loggerName, level);
+        }
+    }
+
+    public void updateLog4jConfiguration(String logFile) {
+        Properties props = new Properties();
+        try {
+            InputStream configStream = getClass().getResourceAsStream("/log4j.properties");
+            props.load(configStream);
+            configStream.close();
+        } catch (IOException e) {
+            System.out.println("Error: Cannot laod configuration file ");
+        }
+        props.setProperty("log4j.appender.FILE.file", logFile);
+        LogManager.resetConfiguration();
+        PropertyConfigurator.configure(props);
+    }
+
+    /**
      * Factory method to retrieve a logger based on a class. Equivalent to getLogger(clazz.getSuiteName()).
      * 
      * @param clazz
@@ -70,28 +122,13 @@ public class Logger {
     }
 
     /**
-     * Logs the given message in the standard out in a given level with a tag "INTEGRATION" in the place of the
-     * running class.
-     * @param message is the message to be logged.
-     * @param level is the level to be used.
-     * @param a given parameter.
-     */
-    private static void logToSystemOut(String message, Level level, Throwable throwable) {
-        System.out.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:S").format(new Date()) + " "+ 
-                level.toString() + " [INTEGRATION] - " + message);
-        if (throwable != null) {
-            throwable.printStackTrace(System.out);
-        }
-    }
-
-    /**
      * Log a message with DEBUG priority
      * 
      * @param message
      *            DEBUG message to be logged
      */
     public void debug(final String message) {
-        logToSystemOut(message, Level.DEBUG, null);
+        mWrapped.debug(message);
     }
 
     /**
@@ -101,7 +138,7 @@ public class Logger {
      *            ERROR message to be logged
      */
     public void error(final String message) {
-        logToSystemOut(message, Level.ERROR, null);
+        mWrapped.error(message);
     }
 
     /**
@@ -113,7 +150,7 @@ public class Logger {
      *            throwable about which information will be logged
      */
     public void error(final String message, final Throwable t) {
-        logToSystemOut(message, Level.ERROR, t);
+        mWrapped.error(message, t);
     }
 
     /**
@@ -124,7 +161,7 @@ public class Logger {
      * @param t throwable about which information will be logged
      */
     public void fatal(String message, Throwable t) {
-        logToSystemOut(message, Level.FATAL, null);
+        mWrapped.fatal(message, t);
     }
 
     /**
@@ -134,7 +171,7 @@ public class Logger {
      *            INFO message to be logged
      */
     public void info(final String message) {
-        logToSystemOut(message, Level.INFO, null);
+        mWrapped.info(message);
     }
 
     /**
@@ -144,7 +181,7 @@ public class Logger {
      *            WARNING message to be logged
      */
     public void warn(final String message) {
-        logToSystemOut(message, Level.WARN, null);
+        mWrapped.warn(message);
     }
 
     /**
@@ -156,7 +193,7 @@ public class Logger {
      *            throwable about which information will be logged
      */
     public void warn(final String message, final Throwable t) {
-        logToSystemOut(message, Level.WARN, t);
+        mWrapped.warn(message, t);
     }
 
     /**

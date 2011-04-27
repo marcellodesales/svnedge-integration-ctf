@@ -41,7 +41,7 @@ public class BootstrapServlet extends HttpServlet {
         super.init(config);
 
         File appHome = new File(new File(".").getAbsoluteFile().getParentFile().getParentFile(), "");
-        smLogger.info("Bootstrapping the Integration server for Subversion Edge at " + appHome);
+        smLogger.info("Bootstrapping the Integration service for Subversion Edge at " + appHome);
 
         smLogger.debug("*** Setting system default locale ***");
         Locale.setDefault(new Locale("en"));
