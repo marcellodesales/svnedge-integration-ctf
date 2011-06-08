@@ -104,21 +104,10 @@ public class SubversionScmServerDaemon extends ScmScmServerDaemon {
         final File repositoryDirFile = getRepositoryDirFromCTFRepositoryPath(repositoryDir);
 
         try {
-            final CommandExecutor commandExecutor = getCommandExecutor();
-
-            // Set permission for the repository so that the appserver
-            // (or integration server not running as root) can re-write
-            // the triggers for synchronize permissions
-            commandExecutor.setUserOnPath(ScmConstants.APP_USER, repositoryDirFile);
-
             // Setup the triggers first before changing permissions. Once the perms
             // are changed, its difficult to chown in a production build(as it runs as
             // a non-root user
             mSubversion.setupTriggers(systemId, repositoryDirFile.getAbsolutePath());
-
-            // Set permission for the apache server to access the new repository
-            commandExecutor.setUserOnPath(ScmConstants.HTTPD_USER, repositoryDirFile);
-            commandExecutor.setGroupOnPath(ScmConstants.HTTPD_GROUP, repositoryDirFile);
         } catch (final CommandWrapperFault e) {
             throw new IntegrationFault(e);
         }
