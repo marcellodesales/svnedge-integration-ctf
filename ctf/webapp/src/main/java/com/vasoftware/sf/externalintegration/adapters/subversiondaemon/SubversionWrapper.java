@@ -2,6 +2,7 @@ package com.vasoftware.sf.externalintegration.adapters.subversiondaemon;
 
 import java.io.File;
 import java.util.StringTokenizer;
+import com.vasoftware.sf.common.logger.Logger;
 
 import com.vasoftware.sf.common.configuration.GlobalOptionKeys;
 import com.vasoftware.sf.common.configuration.SfGlobalOptions;
@@ -21,7 +22,7 @@ import com.vasoftware.sf.externalintegration.execution.CommandWrapperFault;
  */
 public class SubversionWrapper {
 
-    // private static final Logger smLogger = Logger.getLogger(SubversionWrapper.class);
+    private static final Logger smLogger = Logger.getLogger(SubversionWrapper.class);
 
     private final String mSubversionBinary;
     private final String mSubversionLookBinary;
@@ -115,7 +116,13 @@ public class SubversionWrapper {
             final int[] version = new int[tokenizer.countTokens()];
             int i = 0;
             while (tokenizer.hasMoreElements()) {
-                version[i++] = Integer.parseInt(tokenizer.nextToken());
+                int v = -1;
+                try {
+                    v = Integer.parseInt(tokenizer.nextToken());
+                } catch (NumberFormatException e) {
+                    smLogger.warn("Version contained non-numeric value: " + versionToken);
+                }
+                version[i++] = v;
             }
             return version;
         }
