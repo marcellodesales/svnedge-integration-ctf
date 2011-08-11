@@ -81,6 +81,7 @@ ACCESS_TYPE_MODIFIERS = (
 #    [0]: The number of path elements that should follow this folder path in the uri.
 #    [1]: Whether or not there will be a repository path following the folder and its following paths.
 SVN_SPECIAL_DIRS = {
+    # WebDAV/Delta-V basics
     "ver": (1, True),
     "his": (0, False),
     "wrk": (1, True),
@@ -89,6 +90,12 @@ SVN_SPECIAL_DIRS = {
     "bc": (1, True),
     "bln": (1, False),
     "wbl": (2, False),
+    # New in Subversion 1.7.0 (the so-called "HTTPv2")
+    "me": (0, False),
+    "rev": (1, False),
+    "rvr": (1, True),
+    "txn": (1, False),
+    "txr": (1, True),
 }
 
 METHOD_2_ACCESS_TYPE = {
@@ -108,6 +115,7 @@ METHOD_2_ACCESS_TYPE = {
     "MERGE": "commit",
     "LOCK": "commit",
     "UNLOCK": "commit",
+    "POST": "commit",
 }
 
 def authzhandler(req):
@@ -148,7 +156,8 @@ def doAuthzhandler(req):
     has_access = False
     repo_name = req.repo_name
     repo_path = req.repo_path
-
+    svn_special_stub = "%s/%s/%s" % (req.svn_root_uri, repo_name, SVN_SPECIAL_URI)
+    
     # Only proceed if there was a repository name found
     if repo_name and repo_name != "":
         access_type = None # Reasonable default
@@ -203,7 +212,8 @@ def doAuthzhandler(req):
         elif req.method == 'OPTIONS':
             # Always allow 'OPTIONS' requests
             has_access = True
-        elif req.method == 'PROPPATCH' and req.uri.startswith("%s/%s/%s/%s" % (req.svn_root_uri, repo_name, SVN_SPECIAL_URI, "bln")):
+        elif req.method == 'PROPPATCH' and (req.uri.startswith("%s/%s" % (svn_special_stub, "bln")) or
+                                            req.uri.startswith("%s/%s" % (svn_special_stub, "rev"))):
             # We need to handle authorization of revision property changes specially
             repository = "%s/%s" % (req.svn_root_path, repo_name)
             revision = req.uri.split('/')[-1]
@@ -434,7 +444,7 @@ def __dav_svn_parse_uri(uri_to_split, svn_uri_root):
         if SVN_SPECIAL_DIRS.has_key(special_folder):
             # Validate that the special uri
             if len(relative.split(special_folder, 1)[1]) == 0:
-                if not SVN_SPECIAL_DIRS[special_folder][0] != 0:
+                if SVN_SPECIAL_DIRS[special_folder][0] != 0:
                     raise RuntimeError("Missing info after special_uri.")
             elif relative.split(special_folder, 1)[1][0] == '/':
                 min_paths = SVN_SPECIAL_DIRS[special_folder][0] + 1 # We need to account for the special folder
