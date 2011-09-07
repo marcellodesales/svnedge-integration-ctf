@@ -733,9 +733,12 @@ def _prepare(req):
 
     if cache_entry_timestamp != ENTRY_NOT_FOUND:
         # Check to see if the cache's timestamp is stale
-        if (datetime.datetime.now() - cache_entry_timestamp).seconds > CACHE_TIMEOUT:
+        duration = datetime.datetime.now() - cache_entry_timestamp
+        if (duration.days * 86400 + duration.seconds) > CACHE_TIMEOUT:
             # Remove the cache entry as it is stale
             _remove_from_cache(req)
+            if DEBUG:
+                _debug(req, 'Cached entry expired. Seconds=%s' % (duration.days * 86400 + duration.seconds))
 
     # If there is still a cache entry for the cache key, put the pbps into the request object.
     if hasattr(req, 'has_authenticated') and req.has_authenticated and CACHE.has_key(req.cache_key):
