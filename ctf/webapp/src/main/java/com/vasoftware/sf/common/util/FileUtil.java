@@ -78,7 +78,24 @@ public class FileUtil {
             }
         }
 
-        return dir.delete();
+        boolean isDeleted = dir.delete();
+        if (!isDeleted && dir.exists()) {
+            // Directories mounted on NFS volumes may have lingering .nfsXXXX files 
+            // pointing to deleted files which are still referenced by the JVM.  We don't
+            // explicitly have any handles open, however it appears some are created during
+            // the listing above, or in some other unknown way. It seems it is possible to
+            // free them by cleaning up stale objects, and giving the OS time to cleanup as 
+            // well.
+            System.gc();
+            try {
+                Thread.sleep(100);                
+            } catch (InterruptedException e) {
+                // ignored
+            }
+            isDeleted = dir.delete();
+        }
+        
+        return isDeleted;
     }
 
     /**                                                                                                                                                                                                  
