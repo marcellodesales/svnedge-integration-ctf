@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 import os
 import sys
-import SOAPpy 
 import LogFile
 import SourceForge
 
@@ -37,7 +36,7 @@ def perform(args, env):
     # If so, make sure we have the correct permission by making another call to the scmlistener.
     if (not isWandisco and directory == cvsroot + '/CVSROOT'):
 
-        scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+        scm = SourceForge.getSOAPClient("ScmListener")
         key = SourceForge.createScmRequestKey()
 
         # this will throw an exception if the user does not have permission

@@ -24,7 +24,6 @@ the external sytem id as the sixth script argument.
 """
 
 import LogFile
-import SOAPpy
 import SourceForge
 import datetime
 import sys
@@ -94,7 +93,7 @@ def main():
 
             log.write('Converting full Windows path to CTF full path: %s->%s' % (old_repo_path, repo_path))
 
-        scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl('ScmListener'))
+        scm = SourceForge.getSOAPClient("SourceForge")
         key = SourceForge.createScmRequestKey()
         response_raw = scm.isValidCommitMessage(key, user, system_id, repo_path, log_msg)
         response_parts = response_raw.split('\n')

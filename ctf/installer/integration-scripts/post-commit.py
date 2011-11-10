@@ -12,7 +12,6 @@
    in SourceForge and add the files to it."""
 
 import LogFile
-import SOAPpy
 import SourceForge
 import SubversionUtil
 import re
@@ -80,7 +79,7 @@ def doIt(pool, repository, revision, systemId):
 
     # Now hook up the SOAP call to create the commit
     log.write("Instantiating the scm listener")
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("ScmListener")
 
     commitId = None
 
@@ -122,12 +121,12 @@ def doIt(pool, repository, revision, systemId):
 
     # Invalidate the cache if any commits need a cache refresh
     if len(cachesToInvalidate) != 0:
-        cacheInvalidator = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("SourceForge", "50"))
+        cacheInvalidator = SourceForge.getSOAPClient("SourceForge", "50")
         for cache in cachesToInvalidate:
             cacheInvalidator.invalidateResourceBundleCache(cache)    
 
     if len(vmToInvalidate) != 0:
-        cacheInvalidator = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("SourceForge", "50"))
+        cacheInvalidator = SourceForge.getSOAPClient("SourceForge", "50")
         for cache in vmToInvalidate:
             cacheInvalidator.invalidateEmailTemplate(cache)
 

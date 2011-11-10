@@ -13,7 +13,6 @@
 import datetime
 import os
 import sys
-import SOAPpy
 import SourceForge
 import SubversionUtil
 import urllib
@@ -331,7 +330,7 @@ def doAuthenhandler(req):
     # If the user isn't in the authenticated users cache, attempt to authenticate by querying
     # the application server.
     if not is_valid_user:
-        scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+        scm = SourceForge.getSOAPClient("ScmListener")
 
         try:
             key = SourceForge.createScmRequestKey()
@@ -752,7 +751,7 @@ def _prepare(req):
 def _get_pbps(req):
     """ Retrieves the path-based permissions for the user:repo by calling the
     ScmListener.getRolePaths() method on the application server. """
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("ScmListener")
     key = SourceForge.createScmRequestKey()
     raw_pbps = scm.getRolePaths(key, req.user, req.system_id, req.repo_name)
     pbps = {}
@@ -784,7 +783,7 @@ def _get_system_id(req):
         branding_uri = SourceForge.get('subversion_branding.repository_uri')
         if branding_uri and req.uri.startswith(branding_uri):
             # This is a branding repo, get the external system id from ScmListener
-            scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+            scm = SourceForge.getSOAPClient("ScmListener")
             key = SourceForge.createScmRequestKey()
             system_id = scm.getBrandingExternalSystemId(key)
         else:

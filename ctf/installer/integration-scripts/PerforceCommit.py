@@ -2,7 +2,6 @@
 
 import os
 import PerforceUtil
-import SOAPpy
 import SourceForge
 import subprocess
 import sys
@@ -60,7 +59,7 @@ def perform(args, env):
     # at this point in time i don't know how to explicitly set
     # the encoding that we read in.
 
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("ScmListener")
     key = SourceForge.createScmRequestKey()
     commitId = scm.createCommit(key, user, systemid, repositoryroot, logmsg,
         filenames, versions, statuses, reffiles, refversions, None)

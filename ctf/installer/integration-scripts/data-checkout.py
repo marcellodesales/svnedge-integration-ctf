@@ -16,7 +16,6 @@ import os
 import os.path
 import select
 import shutil
-import SOAPpy
 import SourceForge
 import subprocess
 import svn
@@ -83,7 +82,7 @@ def main( ):
         os.system("chown -R %s:%s %s" % (user,group,chkout_dir))
 
 
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("ScmListener")
     try:
         key = SourceForge.createScmRequestKey()
         scm.clearBrandingOverrideCache(key)

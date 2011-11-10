@@ -1,6 +1,5 @@
 # Test script for ScmListenerService class
 
-import SOAPpy
 import SourceForge
 
 def testCheckPermission(user='jgray', password='foobar', repositoryDirectory='/svnroot/rep1'):
@@ -8,7 +7,7 @@ def testCheckPermission(user='jgray', password='foobar', repositoryDirectory='/s
 
     systemId = SourceForge.getRequired('external_system_id')
 
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("ScmListener")
 
     try:
         print "Making checkPermission() call"

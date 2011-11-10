@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-import LogFile, os, re, SOAPpy, SourceForge, StringIO, sys
+import LogFile, os, re, SourceForge, StringIO, sys
 
 from chardet.universaldetector import UniversalDetector
 
@@ -292,7 +292,7 @@ def perform(args, env):
       if diff[-1] == '\n':
         diff = diff[:-1]
 
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("ScmListener")
     key = SourceForge.createScmRequestKey()
 
     try:

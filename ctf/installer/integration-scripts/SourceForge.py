@@ -8,7 +8,8 @@ import base64
 import urllib
 import urllib2
 import urlparse
-import SOAPpy
+
+from suds.client import Client
 
 _props = {}
 
@@ -105,13 +106,35 @@ SOAP_API_DEFAULT_NAMESPACE = ''
 def getDefaultSoapVersion():
     global SOAP_API_DEFAULT_NAMESPACE
     if SOAP_API_DEFAULT_NAMESPACE == '':
-        cnSoap = SOAPpy.SOAPProxy(getSOAPServiceUrl("CollabNet", "60"))
+        cnSoap = getSOAPClient("CollabNet", "60")
         try:
             cnSoap.getApiVersion()
             SOAP_API_DEFAULT_NAMESPACE = "60"
         except Exception, e:
             SOAP_API_DEFAULT_NAMESPACE = "50"
     return SOAP_API_DEFAULT_NAMESPACE
+
+def getSOAPClient(serviceName = 'ScmListener', soapVer = ''):
+    SOAPServiceUrl = getSOAPServiceUrl(serviceName, soapVer)
+    # We need to override the location as the WSDL returns the wrong target namespace
+    scm = Client(SOAPServiceUrl + '?wsdl', location=SOAPServiceUrl)
+    
+    # add proxy settings if they exist
+    httpProxyHost = get('sfmain.integration.http_proxy_host')
+    httpProxyPort = get('sfmain.integration.http_proxy_port')
+    httpProxyUsername = get('sfmain.integration.http_proxy_username')
+    httpProxyPassword = get('sfmain.integration.http_proxy_password')
+    proxyDict = {}
+    if httpProxyHost and len(httpProxyHost) > 0:
+        httpProxy = '%s:%s' % (httpProxyHost, httpProxyPort)
+        if httpProxyUsername and len(httpProxyUsername) > 0:
+            httpProxy = 'http://%s:%s@%s' % (httpProxyUsername, httpProxyPassword, httpProxy)
+        proxyDict['http'] = httpProxy 
+        proxyDict['https'] = httpProxy
+    if proxyDict and len(proxyDict) > 0:
+        scm.set_options(proxy = proxyDict)
+                                           
+    return scm.service
 
 def getSOAPServiceUrl(serviceName, soapVer = ''):
     proto = ["http", "https"] [getBoolean("sfmain.integration.listener_ssl", "false")]

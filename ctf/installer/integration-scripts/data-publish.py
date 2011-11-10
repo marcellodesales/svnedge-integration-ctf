@@ -11,7 +11,6 @@ import sys, os, os.path,getopt
 import popen2,fcntl,select
 import svn
 import shutil
-import SOAPpy
 import LogFile
 import SourceForge
 import getpass

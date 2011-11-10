@@ -2,7 +2,6 @@
 
 import os
 import sys
-import SOAPpy 
 import LogFile
 import SourceForge
 from chardet.universaldetector import UniversalDetector
@@ -61,7 +60,7 @@ def perform(args, env):
     logmsgFile.close()
     content = SourceForge.toutf8(content, log)
     
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("ScmListener")
     
     if (not isWandisco):
         key = SourceForge.createScmRequestKey()

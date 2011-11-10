@@ -9,7 +9,6 @@ and a transaction id, verify that the commit is valid (for example, has
 required associations specified)."""
 
 import LogFile
-import SOAPpy
 import SourceForge
 import SubversionUtil
 import os
@@ -33,7 +32,7 @@ def doIt(pool, repository, txn, systemId):
 
     log.write("commit message: %s\n" % logMsg)
     
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("SourceForge")
     key = SourceForge.createScmRequestKey()
 
     # On Windows, we DO NOT pass the actual repository's full path and instead

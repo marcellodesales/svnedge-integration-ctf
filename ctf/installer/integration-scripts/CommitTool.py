@@ -15,7 +15,6 @@
 import os
 import sys
 import pickle
-import SOAPpy 
 import SourceForge
 
 ppid = os.getppid()
@@ -137,7 +136,7 @@ def doCommit(args, transaction):
     host = transaction.host
     port = transaction.port
 
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("ScmListener")
 
     key = SourceForge.createScmRequestKey()
     if not scm.isValidCommitMessage(key, user, systemid, path, logmsg):
