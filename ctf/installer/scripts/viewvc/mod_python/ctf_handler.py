@@ -12,7 +12,6 @@ from suds import WebFault
 from suds.client import Client
 from urlparse import urlparse
 import os
-import SOAPpy
 import SourceForge
 import string
 import sys
