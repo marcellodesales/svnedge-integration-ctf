@@ -15,18 +15,18 @@
 import os
 import sys
 import pickle
-import SOAPpy 
 import SourceForge
 
 ppid = os.getppid()
 transaction_file = '/tmp/scm_transaction.' + str(ppid)
 
-def usage(message = None):
+def usage(message=None):
     if message:
         print "usage: scm " + message
     else:
         print "usage: scm <create|add|remove|modify|commit|print> [options]"
     sys.exit(1)
+
 
 class ScmTransaction:
     def __init__(self):
@@ -36,7 +36,7 @@ class ScmTransaction:
         self.host = None
         self.port = None
         self.entries = {}
-        self.statuses = [ "Added", "Deleted", "Modified", "Moved", "Copied"]
+        self.statuses = ["Added", "Deleted", "Modified", "Moved", "Copied"]
 
     def hasFile(self, name):
         return self.entries.has_key(name)
@@ -56,20 +56,20 @@ class ScmTransaction:
     def addFile(self, name, version, status='Added'):
         self.assertFileNotDefined(name)
         self.assertValidStatus(status)
-        entry = {'version' : version, 'status': status, 'fromFile': '', 'fromVersion':''}
+        entry = {'version': version, 'status': status, 'fromFile': '', 'fromVersion': ''}
         self.entries[name] = entry
 
     def addFileWithReference(self, name, version, status, fromFile, fromVersion):
         self.assertFileNotDefined(name)
         self.assertValidStatus(status)
-        entry = {'version' : version, 'status': status, 'fromFile': fromFile, 'fromVersion': fromVersion}
+        entry = {'version': version, 'status': status, 'fromFile': fromFile, 'fromVersion': fromVersion}
         self.entries[name] = entry
 
     def rmFile(self, name):
         self.assertFileDefined(name)
         del self.entries[name]
 
-    def touchFile(self, name, version, status = None):
+    def touchFile(self, name, version, status=None):
         self.assertFileDefined(name)
         entry = self.entries[name]
         if status != None:
@@ -94,7 +94,7 @@ class ScmTransaction:
         systemId = str(self.exsyid)
         username = str(self.username)
         path = str(self.path)
-        print "Repository: " + username + "@" + systemId + ":" + path 
+        print "Repository: " + username + "@" + systemId + ":" + path
         for entryKey in self.entries.keys():
             entry = self.entries[entryKey]
             version = str(entry['version'])
@@ -117,11 +117,11 @@ def doCommit(args, transaction):
     reffiles = []
     refversions = []
     doTheCommit = 0
-    
+
     for entryKey in transaction.entries.keys():
         entry = transaction.entries[entryKey]
         doTheCommit = 1
-        filenames += [ entryKey ]
+        filenames += [entryKey]
         versions += [str(entry['version'])]
         statuses += [str(entry['status'])]
         reffiles += [entry['fromFile']]
@@ -137,14 +137,15 @@ def doCommit(args, transaction):
     host = transaction.host
     port = transaction.port
 
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("ScmListener")
 
     key = SourceForge.createScmRequestKey()
     if not scm.isValidCommitMessage(key, user, systemid, path, logmsg):
         raise Exception("Artifact association required to commit.")
 
     key = SourceForge.createScmRequestKey()
-    commitId = scm.createCommit(key, user, systemid, path, logmsg, filenames, versions, statuses, reffiles, refversions, None)
+    commitId = scm.createCommit(key, user, systemid, path, logmsg, filenames, versions, statuses, reffiles, refversions,
+                                None)
     transaction.clear()
 
 # takes systemid, path, username
@@ -162,6 +163,7 @@ def doCreate(args, transaction):
         transaction.use_ssl = 0
     transaction.entries = {}
 
+
 def doAdd(args, transaction):
     if len(args) < 2:
         usage("add <filename> <version> [<status> [<fromfile> <fromversion>]]")
@@ -176,10 +178,12 @@ def doAdd(args, transaction):
         else:
             transaction.addFile(args[0], args[1], args[2])
 
+
 def doRemove(args, transaction):
     if len(args) != 1:
         usage("remove <filename>")
     transaction.rmFile(args[0])
+
 
 def doModify(args, transaction):
     if len(args) < 2:
@@ -195,9 +199,10 @@ def doModify(args, transaction):
         else:
             transaction.touchFile(args[0], args[1], args[2])
 
+
 def doPrint(args, transaction):
     transaction.describe()
-    
+
 # Actual execution is started here.
 if len(sys.argv) < 2:
     usage()

@@ -2,7 +2,6 @@
 
 import os
 import PerforceUtil
-import SOAPpy
 import SourceForge
 import subprocess
 import sys
@@ -10,10 +9,10 @@ import xml.sax.saxutils
 
 
 def perform(args, env):
-    perforcePort =    SourceForge.getRequired('sfmain.integration.perforce.port')
-    host =            SourceForge.getRequired('sfmain.integration.listener_host')
-    port =            SourceForge.getRequired('sfmain.integration.listener_port')
-    p4bin =           SourceForge.getRequired('sfmain.integration.executables.perforce')
+    perforcePort = SourceForge.getRequired('sfmain.integration.perforce.port')
+    host = SourceForge.getRequired('sfmain.integration.listener_host')
+    port = SourceForge.getRequired('sfmain.integration.listener_port')
+    p4bin = SourceForge.getRequired('sfmain.integration.executables.perforce')
     sourceforgeHome = SourceForge.getRequired('sfmain.sourceforge_home')
 
 
@@ -44,7 +43,7 @@ def perform(args, env):
     if returncode != 0:
         raise Exception('p4 describe exited abnormally: returncode=' + str(returncode) +
                         ' command=[' + command + ']' +
-                         ' output=' + describeout + ' error=' + describeerr)
+                        ' output=' + describeout + ' error=' + describeerr)
 
     describedata = PerforceUtil.parsePerforceDescribe(describeout, commandParams, 'true')
     logmsg = describedata['logmsg']
@@ -60,14 +59,14 @@ def perform(args, env):
     # at this point in time i don't know how to explicitly set
     # the encoding that we read in.
 
-    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    scm = SourceForge.getSOAPClient("ScmListener")
     key = SourceForge.createScmRequestKey()
     commitId = scm.createCommit(key, user, systemid, repositoryroot, logmsg,
-        filenames, versions, statuses, reffiles, refversions, None)
+                                filenames, versions, statuses, reffiles, refversions, None)
 
 # Actual execution is started here.
 try:
-    perform(sys.argv,os.environ)
+    perform(sys.argv, os.environ)
 except Exception, e:
     print 'PerforceCommit Failed: ' + e.__str__()
     sys.exit(1)
