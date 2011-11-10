@@ -8,22 +8,21 @@ import base64
 import urllib
 import urllib2
 import urlparse
-
-from suds.client import Client
+import SOAPpy
 
 _props = {}
 
-DEFAULT_SOURCEFORGE_PROPERTIES_PATH = "/etc/sourceforge.properties"
+DEFAULT_SOURCEFORGE_PROPERTIES_PATH="/etc/sourceforge.properties"
 FAKE_WINDOWS_SCMROOT = '/windows-scmroot'
 
 # If kconv module exists, character code conversion is enabled.
 # default: false(0)
 try:
-    import kconv
+  import kconv
 except ImportError:
-    useKconv = False
+  useKconv = False
 else:
-    useKconv = True
+  useKconv = True
 
 # decide japanese character code in string, and convert japanese character code to utf-8.
 # if cannot decide code, kconv does not convert a character code.
@@ -36,35 +35,33 @@ def toutf8(txt, log):
         return txt
     else:
         try:
-            txt = unicode(txt, 'utf-8')
+          txt = unicode(txt, 'utf-8')
         except Exception, e:
-            try:
-                txt = unicode(txt, 'windows-1252')
-            except Exception, e:
-                log.write("Using UniversalDetector to convert encoding")
-                detector = UniversalDetector()
-                detector.feed(txt)
-                detector.close()
-                if detector.result["encoding"] is not None:
-                    log.write("Detected encoding: " + detector.result["encoding"] + " confidence: " + str(
-                        detector.result["confidence"]))
-                    try:
-                        txt = unicode(txt, detector.result["encoding"])
-                    except Exception, e:
-                        txt = unicode(txt, 'raw-unicode-escape')
-                        log.write("Detected encoding seems to be wrong")
-                else:
+          try:
+            txt = unicode(txt, 'windows-1252')
+          except Exception, e:
+            log.write("Using UniversalDetector to convert encoding")
+            detector = UniversalDetector()
+            detector.feed(txt)
+            detector.close()
+            if detector.result["encoding"] is not None:
+                log.write("Detected encoding: " + detector.result["encoding"] + " confidence: " +  str(detector.result["confidence"]))
+                try:
+                    txt = unicode(txt, detector.result["encoding"])
+                except Exception, e:
                     txt = unicode(txt, 'raw-unicode-escape')
-                    log.write("Failed to detect encoding")
+                    log.write("Detected encoding seems to be wrong")
+            else:
+                txt = unicode(txt, 'raw-unicode-escape')
+                log.write("Failed to detect encoding")
         return txt
-
 
 def load(filename=DEFAULT_SOURCEFORGE_PROPERTIES_PATH):
     global _props
 
     # When filename is the default, check for the SOURCEFORGE_PROPERTIES_PATH environment variable as a potential override
     if filename == DEFAULT_SOURCEFORGE_PROPERTIES_PATH and os.environ.has_key('SOURCEFORGE_PROPERTIES_PATH'):
-        filename = os.environ['SOURCEFORGE_PROPERTIES_PATH']
+      filename = os.environ['SOURCEFORGE_PROPERTIES_PATH']
 
     propFile = open(filename, "r")
     propLine = propFile.readline()
@@ -81,13 +78,11 @@ def load(filename=DEFAULT_SOURCEFORGE_PROPERTIES_PATH):
     propFile.close()
     return _props
 
-
 def assertProperty(propertyMap, key):
     if not key in propertyMap:
         raise Exception(key + ' must be set in sourceforge.properties')
 
-
-def get(key, default=None):
+def get(key, default = None):
     if not _props: load()
     return _props.get(key, default)
 
@@ -97,8 +92,7 @@ def getRequired(key):
     assertProperty(_props, key)
     return _props[key]
 
-
-def getBoolean(key, default=None):
+def getBoolean(key, default = None):
     return string.lower(get(key, default)) in ["1", "true", "on"]
 
 
@@ -108,11 +102,10 @@ def normalizeRepositoryPath(path):
     return os.path.abspath(path)
 
 SOAP_API_DEFAULT_NAMESPACE = ''
-
 def getDefaultSoapVersion():
     global SOAP_API_DEFAULT_NAMESPACE
     if SOAP_API_DEFAULT_NAMESPACE == '':
-        cnSoap = getSOAPClient("CollabNet", "60")
+        cnSoap = SOAPpy.SOAPProxy(getSOAPServiceUrl("CollabNet", "60"))
         try:
             cnSoap.getApiVersion()
             SOAP_API_DEFAULT_NAMESPACE = "60"
@@ -120,32 +113,8 @@ def getDefaultSoapVersion():
             SOAP_API_DEFAULT_NAMESPACE = "50"
     return SOAP_API_DEFAULT_NAMESPACE
 
-
-def getSOAPClient(serviceName='ScmListener', soapVer=''):
-    SOAPServiceUrl = getSOAPServiceUrl(serviceName, soapVer)
-    # We need to override the location as the WSDL returns the wrong target namespace
-    scm = Client(SOAPServiceUrl + '?wsdl', location=SOAPServiceUrl)
-
-    # add proxy settings if they exist
-    httpProxyHost = get('sfmain.integration.http_proxy_host')
-    httpProxyPort = get('sfmain.integration.http_proxy_port')
-    httpProxyUsername = get('sfmain.integration.http_proxy_username')
-    httpProxyPassword = get('sfmain.integration.http_proxy_password')
-    proxyDict = {}
-    if httpProxyHost and len(httpProxyHost) > 0:
-        httpProxy = '%s:%s' % (httpProxyHost, httpProxyPort)
-        if httpProxyUsername and len(httpProxyUsername) > 0:
-            httpProxy = 'http://%s:%s@%s' % (httpProxyUsername, httpProxyPassword, httpProxy)
-        proxyDict['http'] = httpProxy
-        proxyDict['https'] = httpProxy
-    if proxyDict and len(proxyDict) > 0:
-        scm.set_options(proxy=proxyDict)
-
-    return scm.service
-
-
-def getSOAPServiceUrl(serviceName, soapVer=''):
-    proto = ["http", "https"][getBoolean("sfmain.integration.listener_ssl", "false")]
+def getSOAPServiceUrl(serviceName, soapVer = ''):
+    proto = ["http", "https"] [getBoolean("sfmain.integration.listener_ssl", "false")]
     host = getRequired('sfmain.integration.listener_host')
     port = getRequired('sfmain.integration.listener_port')
 
@@ -158,7 +127,7 @@ def getSOAPServiceUrl(serviceName, soapVer=''):
     soapPrefix = "/ce-soap"
     if int(soapVer) < 50:
         soapPrefix = "/sf-soap"
-
+    
     if serviceName == 'ScmListener':
         if int(soapVer) == 50:
             soapPrefix = "/sf-soap"
@@ -166,48 +135,46 @@ def getSOAPServiceUrl(serviceName, soapVer=''):
 
     return proto + "://" + host + ":" + port + soapPrefix + soapVer + "/services/" + serviceName
 
-
 def getIntegrationServerUrl():
-    """Creates a url to the integration server"""
-    proto = ["http", "https"][getBoolean("sfmain.integration.listener_ssl", "false")]
-    host = getRequired('sfmain.integration.listener_host')
-    port = getRequired('sfmain.integration.listener_port')
+  """Creates a url to the integration server"""
+  proto = ["http", "https"] [getBoolean("sfmain.integration.listener_ssl", "false")]
+  host = getRequired('sfmain.integration.listener_host')
+  port = getRequired('sfmain.integration.listener_port')
 
-    return proto + "://" + host + ":" + port + "/integration"
-
+  return proto + "://" + host + ":" + port + "/integration"
 
 def getScmPermissionForPath(username, system_id, repo_path, access_type):
-    """Queries the ScmPermissionsProxyServlet on the integration server for permission"""
-    integration_url = getIntegrationServerUrl() + "/servlet/ScmPermissionsProxyServlet"
-    response = (1, 1, 1)
+  """Queries the ScmPermissionsProxyServlet on the integration server for permission"""
+  integration_url = getIntegrationServerUrl() + "/servlet/ScmPermissionsProxyServlet"
+  response = (1, 1, 1)
 
-    if not access_type:
-        response = (1, 1)
+  if not access_type:
+    response = (1, 1)
 
-    # The query params
-    query_params = {
-        'username': username,
-        'systemId': system_id,
-        'repoPath': repo_path,
-        }
+  # The query params
+  query_params = {
+    'username': username,
+    'systemId': system_id,
+    'repoPath': repo_path,
+  }
 
-    if access_type:
-        query_params['accessType'] = access_type
+  if access_type:
+    query_params['accessType'] = access_type
 
-    # Make servlet request and read response
-    servlet = urllib2.urlopen(integration_url, urllib.urlencode(query_params))
-    lines = []
+  # Make servlet request and read response
+  servlet = urllib2.urlopen(integration_url, urllib.urlencode(query_params))
+  lines = []
 
-    for line in servlet.readlines():
-        lines.append(line)
+  for line in servlet.readlines():
+    lines.append(line)
 
-    servlet.close()
+  servlet.close()
 
-    response = lines[0].split(":")
+  response = lines[0].split(":")
 
-    response = [int(x) for x in response]
+  response = [int(x) for x in response]
 
-    return response
+  return response
 
 SCM_TIMESTAMP_SALT = 0x34A49f41
 SCM_KEY_SEED = "kaboomastringa"
@@ -228,17 +195,15 @@ def getSha1Hash(string):
         msg.update(string)
     else:
         # Unsupported version of Python
-        raise Exception('Unsupported version of Python.  Python version must be '\
-                        'greater or equal to 2.4 or less than 3.0')
+        raise Exception('Unsupported version of Python.  Python version must be ' \
+                          'greater or equal to 2.4 or less than 3.0')
 
     return msg.digest()
-
 
 def initTimestampSalt():
     global SCM_TIMESTAMP_SALT
     h = getSha1Hash(SCM_DEFAULT_SHARED_SECRET)
     SCM_TIMESTAMP_SALT = struct.unpack("i", h[0:4])[0]
-
 
 def prepareScmRequestKey(rnd, timestamp):
     rndBytes = struct.pack("i", rnd)
@@ -247,46 +212,44 @@ def prepareScmRequestKey(rnd, timestamp):
     hash = getSha1Hash(passwd + rndBytes + timeBytes + passwd + SCM_KEY_SEED)
     return rndBytes + timeBytes + hash #+ "13"
 
-
 def createScmRequestKey():
-    key = prepareScmRequestKey(random.randint(0, 2 ^ 32 - 1), int(time.time()))
+    key = prepareScmRequestKey(random.randint(0, 2^32-1), int(time.time()))
     return base64.encodestring(key)
 
-
 def getCTFWindowsRepositoryPath(path):
-    """ On Windows we have a special scenario where we have to fake CTF out to
-   work with Windows.  The way this is done is when we initialize an external
-   system integration server, we use /windows-scmroot as the repository root
-   path even though the repositories really will reside at
-   <scm_type>.repository_base.  The reason for this is that CTF only works
-   with Unix paths. So whenever CTF gets a full repository path as a method
-   parameter, we have to ensure that our paths are /windows-scmroot/<repo_name>
-   so that CTF recognizes the repository path. This function does no operating
-   system checks so it is up to the consumer to decide if this function call is
-   necessary. """
-    return '%s/%s' % (FAKE_WINDOWS_SCMROOT, os.path.basename(path))
+  """ On Windows we have a special scenario where we have to fake CTF out to
+  work with Windows.  The way this is done is when we initialize an external
+  system integration server, we use /windows-scmroot as the repository root
+  path even though the repositories really will reside at
+  <scm_type>.repository_base.  The reason for this is that CTF only works
+  with Unix paths. So whenever CTF gets a full repository path as a method
+  parameter, we have to ensure that our paths are /windows-scmroot/<repo_name>
+  so that CTF recognizes the repository path. This function does no operating
+  system checks so it is up to the consumer to decide if this function call is
+  necessary. """
+  return '%s/%s' % (FAKE_WINDOWS_SCMROOT, os.path.basename(path))
 
 # getCTFWindowsRepositoryPath()
 
 def isWindows():
-    """ Returns True if os.name == 'nt' and False otherwise. """
-    return os.name == 'nt'
+  """ Returns True if os.name == 'nt' and False otherwise. """
+  return os.name == 'nt'
 
 # isWindows()
 
 def getTemporaryDirectory():
-    """ Returns the temporary directory for this system.  This can be configured in
-   sourceforge.properties via the sfmain.tempdir property.  If that propery is not
-   found, we then resort to using Python's mechanism for identifying the temporary
-   directory. """
-    tmp_dir = get('sfmain.tempdir')
+  """ Returns the temporary directory for this system.  This can be configured in
+  sourceforge.properties via the sfmain.tempdir property.  If that propery is not
+  found, we then resort to using Python's mechanism for identifying the temporary
+  directory. """
+  tmp_dir = get('sfmain.tempdir')
 
-    if tmp_dir is None:
-        import tempfile
+  if tmp_dir is None:
+    import tempfile
 
-        tmp_dir = tempfile.gettempdir()
+    tmp_dir = tempfile.gettempdir()
 
-    return tmp_dir
+  return tmp_dir
 
 # getTemporaryDirectory()
 

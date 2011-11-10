@@ -13,6 +13,7 @@
 import datetime
 import os
 import sys
+import SOAPpy
 import SourceForge
 import SubversionUtil
 import urllib
@@ -36,19 +37,20 @@ CACHE_ENABLED = True
 # On the other hand, increasing this timeout has a direct impact on performance
 # and scalability because more users can be cached for longer.
 # This is in seconds.
-CACHE_TIMEOUT = 180
+CACHE_TIMEOUT = 180 
 # This setting has a significant impact on the performance of Subversion.
 # The higher its value the more time and effort is saved fetching for permissions.  
 # Beware, increasing this also increases (as a mulitple) the amount of memory
 # Apache threads will be holding on to until items are taken out of the cache.
 MAX_CACHE_ENTRIES = 100
 
+
 ENTRY_NOT_FOUND = '!!!NOTFOUND!!!'
 
 # Below is a tuple of known access types.
 ACCESS_TYPES = (
-'commit', # This access type is for operations that will change the repository
-'view', # This access type is for operations that will view the repository
+    'commit', # This access type is for operations that will change the repository
+    'view', # This access type is for operations that will view the repository
 )
 
 # Below is a tuple of known access type modifiers
@@ -68,8 +70,8 @@ ACCESS_TYPES = (
 # explicitly use a modifier is when initially checking for global
 # read and global write access for early return if possible.
 ACCESS_TYPE_MODIFIERS = (
-'all', # This modifier means access at the specified path *and* everywhere below
-'any', # This modifier means access at the specified path *or* anywhere below
+    'all', # This modifier means access at the specified path *and* everywhere below
+    'any', # This modifier means access at the specified path *or* anywhere below
 )
 
 # Below is a structure that contains the special folders that can be found in a Subversion uri.
@@ -94,7 +96,7 @@ SVN_SPECIAL_DIRS = {
     "rvr": (1, True),
     "txn": (1, False),
     "txr": (1, True),
-    }
+}
 
 METHOD_2_ACCESS_TYPE = {
     "OPTIONS": "special", # Always granted
@@ -114,7 +116,7 @@ METHOD_2_ACCESS_TYPE = {
     "LOCK": "commit",
     "UNLOCK": "commit",
     "POST": "commit",
-    }
+}
 
 def authzhandler(req):
     """ This method gets called by mod_python to perform authorization """
@@ -131,7 +133,6 @@ def authzhandler(req):
 
         return apache.HTTP_INTERNAL_SERVER_ERROR
 
-
 def authenhandler(req):
     """ This method gets called by mod_python to perform authentication """
     try:
@@ -147,7 +148,6 @@ def authenhandler(req):
 
         return apache.HTTP_INTERNAL_SERVER_ERROR
 
-
 def doAuthzhandler(req):
     """ This method queries against the sourceforge server to check if the username can access a repository path """
     # Prepare to handle the request
@@ -157,7 +157,7 @@ def doAuthzhandler(req):
     repo_name = req.repo_name
     repo_path = req.repo_path
     svn_special_stub = "%s/%s/%s" % (req.svn_root_uri, repo_name, SVN_SPECIAL_URI)
-
+    
     # Only proceed if there was a repository name found
     if repo_name and repo_name != "":
         access_type = None # Reasonable default
@@ -225,8 +225,7 @@ def doAuthzhandler(req):
                 return apache.HTTP_INTERNAL_SERVER_ERROR
 
             if DEBUG:
-                _debug(req,
-                       'User %s is attempting to change a revision property for revision %s' % (req.user, revision))
+                _debug(req, 'User %s is attempting to change a revision property for revision %s' % (req.user, revision))
 
             # For authorizing a revision property change, all we need to do is
             # get a list of changed paths for the revision, regardless of change,
@@ -261,7 +260,7 @@ def doAuthzhandler(req):
             if req.main and (dest_url == req.parsed_uri[apache.URI_PATH]):
                 if DEBUG:
                     _debug(req, '%s subrequest has matching source and destination (%s)' % (req.method, dest_uri))
-
+                    
             # Decode the uri
             dest_uri = urllib.unquote(dest_uri)
 
@@ -289,7 +288,6 @@ def doAuthzhandler(req):
 
         return apache.HTTP_FORBIDDEN
 
-
 def doAuthenhandler(req):
     """ This method queries against the TeamForge server to check is the username/password is valid """
     is_valid_user = False
@@ -308,7 +306,7 @@ def doAuthenhandler(req):
     # if we don't return a 401 result, for lack of username, a windows server will not 
     # cause the client to prompt for credentials.  (For Linux, it seems the 401 is delivered
     # further up the stack.)
-    if username is None:
+    if username is None:  
         return apache.HTTP_UNAUTHORIZED
 
     # Prepare to handle the request
@@ -333,7 +331,7 @@ def doAuthenhandler(req):
     # If the user isn't in the authenticated users cache, attempt to authenticate by querying
     # the application server.
     if not is_valid_user:
-        scm = SourceForge.getSOAPClient("ScmListener")
+        scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
 
         try:
             key = SourceForge.createScmRequestKey()
@@ -366,7 +364,7 @@ def doAuthenhandler(req):
             # Persist the authenticated users
             _add_to_cache(req, 'authenticated_users', authenticated_users)
 
-        req.headers_out.add('CtfUserName', username)
+        req.headers_out.add('CtfUserName',username)
 
         req.has_authenticated = True
 
@@ -374,7 +372,6 @@ def doAuthenhandler(req):
         return authzhandler(req);
     else:
         return apache.HTTP_UNAUTHORIZED
-
 
 def _update_environment(options):
     """ For the given mod_python notes, check for sourceforge.properties.path and if present
@@ -504,8 +501,7 @@ def _has_permission(req, repo_path, access_type, access_modifier=None):
             else:
                 access_modifier_str = ' (any)'
 
-        _debug(req, 'Checking %s%s permissions on %s%s for %s' % (
-        access_type, access_modifier_str, req.repo_name, repo_path, req.user))
+        _debug(req, 'Checking %s%s permissions on %s%s for %s' % (access_type, access_modifier_str, req.repo_name, repo_path, req.user))
 
     if not hasattr(req, 'pbps'):
         pbps = _get_pbps(req)
@@ -666,7 +662,7 @@ def _remove_oldest_cache_entry(req):
     del CACHE[oldest[1]]
 
     if DEBUG:
-        _debug(req, 'Removed least used cache entry: [%s, %s]' % (oldest[1], oldest[0]))
+        _debug(req, 'Removed least used cache entry: [%s, %s]' % (oldest[1],oldest[0]))
 
 # _remove_oldest_cache_entry()
 
@@ -726,11 +722,10 @@ def _prepare(req):
     # Clear the cache if it has reached the maximum number of entries
     if len(CACHE.keys()) >= MAX_CACHE_ENTRIES:
         if DEBUG:
-            _debug(req,
-                   'Clearing cache as the cache has reached the maximum number of entries (%d)' % MAX_CACHE_ENTRIES)
+            _debug(req, 'Clearing cache as the cache has reached the maximum number of entries (%d)' % MAX_CACHE_ENTRIES)
 
         # The cache is full, but we only need to make room if this is something not already cached.
-        if not CACHE.has_key(req.cache_key):
+        if not CACHE.has_key(req.cache_key): 
             _remove_oldest_cache_entry(req)
 
     # If there is already a cache entry for this system:repo:user:conn, remove it if it's stale.
@@ -757,14 +752,13 @@ def _prepare(req):
 def _get_pbps(req):
     """ Retrieves the path-based permissions for the user:repo by calling the
     ScmListener.getRolePaths() method on the application server. """
-    scm = SourceForge.getSOAPClient("ScmListener")
+    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
     key = SourceForge.createScmRequestKey()
     raw_pbps = scm.getRolePaths(key, req.user, req.system_id, req.repo_name)
     pbps = {}
 
     if DEBUG:
-        _debug(req, 'ScmListener.getRolePaths(%s, %s, %s, %s) -> %s' % (
-        key, req.user, req.system_id, req.repo_name, repr(raw_pbps)))
+        _debug(req, 'ScmListener.getRolePaths(%s, %s, %s, %s) -> %s' % (key, req.user, req.system_id, req.repo_name, repr(raw_pbps)))
 
     # Take the PBPs and turn them into a dictionary where the path is the key
     for pbp in raw_pbps:
@@ -790,7 +784,7 @@ def _get_system_id(req):
         branding_uri = SourceForge.get('subversion_branding.repository_uri')
         if branding_uri and req.uri.startswith(branding_uri):
             # This is a branding repo, get the external system id from ScmListener
-            scm = SourceForge.getSOAPClient("ScmListener")
+            scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
             key = SourceForge.createScmRequestKey()
             system_id = scm.getBrandingExternalSystemId(key)
         else:
@@ -806,7 +800,7 @@ def _get_system_id(req):
 # _get_system_id()
 
 def _debug(req, msg):
-    """ Write an entry to the Apache error log. """
-    req.log_error('[scm debug] %s' % msg)
+   """ Write an entry to the Apache error log. """
+   req.log_error('[scm debug] %s' % msg)
 
 # _debug()

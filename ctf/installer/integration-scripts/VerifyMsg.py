@@ -2,6 +2,7 @@
 
 import os
 import sys
+import SOAPpy 
 import LogFile
 import SourceForge
 from chardet.universaldetector import UniversalDetector
@@ -9,7 +10,6 @@ from chardet.universaldetector import UniversalDetector
 def assertProperty(propertyMap, key):
     if not key in propertyMap:
         raise Exception(key + ' must be set')
-
 
 def perform(args, env):
     tempdir = SourceForge.getRequired('sfmain.tempdir')
@@ -22,14 +22,14 @@ def perform(args, env):
     user = env['USER']
     cvsroot = SourceForge.normalizeRepositoryPath(env['CVSROOT'])
 
-    #    pid = os.getpid() # get our process id
-    #    pgid = os.getpgrp() # get our process group id
-    #
-    #    # See if a commitid file already exists for our process group.
-    #    # If so, don't do anything all this work was done previously.
-    #    commitIdFilename = os.path.join(tempdir, user + '-' + str(pgid) + '-commitid' )
-    #    if os.path.exists(commitIdFilename):
-    #        return
+#    pid = os.getpid() # get our process id
+#    pgid = os.getpgrp() # get our process group id
+#
+#    # See if a commitid file already exists for our process group.
+#    # If so, don't do anything all this work was done previously.
+#    commitIdFilename = os.path.join(tempdir, user + '-' + str(pgid) + '-commitid' )
+#    if os.path.exists(commitIdFilename):
+#        return
 
     integrationLog = SourceForge.get('sfmain.sourceforge_home') + '/var/log'
 
@@ -60,20 +60,20 @@ def perform(args, env):
     content = logmsgFile.read()
     logmsgFile.close()
     content = SourceForge.toutf8(content, log)
-
-    scm = SourceForge.getSOAPClient("ScmListener")
-
+    
+    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
+    
     if (not isWandisco):
         key = SourceForge.createScmRequestKey()
         commitMessageResponseStr = scm.isValidCommitMessage(key, user, systemid, cvsroot, content)
-
+    
         commitMessageResponseParts = commitMessageResponseStr.split('\n')
         curLine = commitMessageResponseParts.pop(0)
-
+    
         print ''
         while len(commitMessageResponseParts) > 0:
             print commitMessageResponseParts.pop(0)
-
+    
         if curLine == 'false':
             raise Exception("Association required to commit.")
 
@@ -89,11 +89,10 @@ def perform(args, env):
 try:
     log = LogFile.LogFile('/tmp/VerifyMsg.log')
     log.setLogging(False)
-    perform(sys.argv, os.environ)
+    perform(sys.argv,os.environ)
     log.close()
 except Exception, e:
     import traceback
-
     traceback.print_tb(sys.exc_info()[2], None, log)
     log.close()
     print 'VerifyMessage Failed: ' + e.__str__()

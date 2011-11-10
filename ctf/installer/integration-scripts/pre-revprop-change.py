@@ -24,6 +24,7 @@ the external sytem id as the sixth script argument.
 """
 
 import LogFile
+import SOAPpy
 import SourceForge
 import datetime
 import sys
@@ -93,7 +94,7 @@ def main():
 
             log.write('Converting full Windows path to CTF full path: %s->%s' % (old_repo_path, repo_path))
 
-        scm = SourceForge.getSOAPClient("SourceForge")
+        scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl('ScmListener'))
         key = SourceForge.createScmRequestKey()
         response_raw = scm.isValidCommitMessage(key, user, system_id, repo_path, log_msg)
         response_parts = response_raw.split('\n')
@@ -116,15 +117,13 @@ def main():
 # Following the same pattern as the other Subversion hooks
 if __name__ == '__main__':
     result = 0
-    log = LogFile.LogFile(
-        '%s/%s' % (SourceForge.get('sfmain.logdir', SourceForge.getTemporaryDirectory()), 'pre-revprop-change.log'))
+    log = LogFile.LogFile('%s/%s' % (SourceForge.get('sfmain.logdir', SourceForge.getTemporaryDirectory()), 'pre-revprop-change.log'))
     log.setLogging(DEBUG)
 
     try:
         result = main()
     except:
         import traceback
-
         exception = sys.exc_info()
         traceLines = traceback.format_exception(exception[0], exception[1], exception[2])
         result = 1

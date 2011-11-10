@@ -9,6 +9,7 @@ and a transaction id, verify that the commit is valid (for example, has
 required associations specified)."""
 
 import LogFile
+import SOAPpy
 import SourceForge
 import SubversionUtil
 import os
@@ -26,13 +27,13 @@ def doIt(pool, repository, txn, systemId):
 
     tempdir = SourceForge.getRequired('sfmain.tempdir')
 
-    svnlook = SubversionUtil.createSVNLook(repository, txn=txn)
+    svnlook = SubversionUtil.createSVNLook(repository, txn = txn)
     logMsg = unicode(svnlook.log(), 'utf-8')
     author = svnlook.author()
 
     log.write("commit message: %s\n" % logMsg)
-
-    scm = SourceForge.getSOAPClient("SourceForge")
+    
+    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
     key = SourceForge.createScmRequestKey()
 
     # On Windows, we DO NOT pass the actual repository's full path and instead
@@ -60,7 +61,6 @@ def doIt(pool, repository, txn, systemId):
 
     return 0
 
-
 def main():
     args = sys.argv
     if len(args) < 3:
@@ -85,15 +85,13 @@ def main():
 
 if __name__ == "__main__":
     result = 0
-    log = LogFile.LogFile(
-        '%s/%s' % (SourceForge.get('sfmain.logdir', SourceForge.getTemporaryDirectory()), 'pre-commit.log'))
+    log = LogFile.LogFile('%s/%s' % (SourceForge.get('sfmain.logdir', SourceForge.getTemporaryDirectory()), 'pre-commit.log'))
     log.setLogging(DEBUG)
 
     try:
         result = main()
     except:
         import traceback
-
         exception = sys.exc_info()
         traceLines = traceback.format_exception(exception[0], exception[1], exception[2])
         result = 1

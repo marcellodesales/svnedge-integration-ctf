@@ -12,6 +12,7 @@
    in SourceForge and add the files to it."""
 
 import LogFile
+import SOAPpy
 import SourceForge
 import SubversionUtil
 import re
@@ -29,7 +30,7 @@ def doIt(pool, repository, revision, systemId):
     if systemId == None:
         systemId = SourceForge.getRequired('external_system_id')
 
-    svnlook = SubversionUtil.createSVNLook(repository, rev=revision)
+    svnlook = SubversionUtil.createSVNLook(repository, rev = revision)
     changes = svnlook.changed()
     changes = SubversionUtil.generalizeChanges(changes)
 
@@ -43,29 +44,29 @@ def doIt(pool, repository, revision, systemId):
 
     cachesToInvalidate = []
     vmToInvalidate = []
-
+    
     for changeRec in changes:
         changedPaths.append(unicode(changeRec[2], 'utf-8'))
         if repository == "/sf-svnroot/branding":
             if changeRec[2].endswith(".properties") and changeRec[2].find('i18n/') != -1:
                 fileName = changeRec[2]
-                fileName = fileName[fileName.index('i18n/') + 5:fileName.index('.properties')]
-                fileName = fileName.replace('/', '.')
+                fileName = fileName[fileName.index('i18n/')+5:fileName.index('.properties')]
+                fileName = fileName.replace('/','.')
                 cachesToInvalidate.append(fileName)
 
             if changeRec[2].endswith(".vm") and changeRec[2].find('templates/mail/') != -1:
                 fileName = changeRec[2]
-                fileName = fileName[fileName.index('templates/mail/') + 15:fileName.index('.vm')]
-                fileName = fileName.replace('/', '.')
-                vmToInvalidate.append(fileName)
+                fileName = fileName[fileName.index('templates/mail/')+15:fileName.index('.vm')]
+                fileName = fileName.replace('/','.')
+                vmToInvalidate.append(fileName)       
 
         versions.append(str(revision))
-
+        
         if changeRec[0]:
-            statuses.append(statusMap.get(changeRec[0], ''))
+        	statuses.append(statusMap.get(changeRec[0], ''))
         elif changeRec[1]:
-            statuses.append(statusMap.get(changeRec[1], ''))
-
+        	statuses.append(statusMap.get(changeRec[1], ''))
+        
         if len(changeRec) > 3 and changeRec[3] != None:
             refFilenames.append(unicode(changeRec[3], 'utf-8'))
             refVersions.append(str(changeRec[4]))
@@ -79,7 +80,7 @@ def doIt(pool, repository, revision, systemId):
 
     # Now hook up the SOAP call to create the commit
     log.write("Instantiating the scm listener")
-    scm = SourceForge.getSOAPClient("ScmListener")
+    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
 
     commitId = None
 
@@ -121,17 +122,16 @@ def doIt(pool, repository, revision, systemId):
 
     # Invalidate the cache if any commits need a cache refresh
     if len(cachesToInvalidate) != 0:
-        cacheInvalidator = SourceForge.getSOAPClient("SourceForge", "50")
+        cacheInvalidator = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("SourceForge", "50"))
         for cache in cachesToInvalidate:
-            cacheInvalidator.invalidateResourceBundleCache(cache)
+            cacheInvalidator.invalidateResourceBundleCache(cache)    
 
     if len(vmToInvalidate) != 0:
-        cacheInvalidator = SourceForge.getSOAPClient("SourceForge", "50")
+        cacheInvalidator = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("SourceForge", "50"))
         for cache in vmToInvalidate:
             cacheInvalidator.invalidateEmailTemplate(cache)
 
     return 0
-
 
 def main():
     args = sys.argv
@@ -157,15 +157,13 @@ def main():
 
 if __name__ == "__main__":
     result = 0
-    log = LogFile.LogFile(
-        '%s/%s' % (SourceForge.get('sfmain.logdir', SourceForge.getTemporaryDirectory()), 'post-commit.log'))
+    log = LogFile.LogFile('%s/%s' % (SourceForge.get('sfmain.logdir', SourceForge.getTemporaryDirectory()), 'post-commit.log'))
     log.setLogging(DEBUG)
 
     try:
         result = main()
     except:
         import traceback
-
         exception = sys.exc_info()
         traceLines = traceback.format_exception(exception[0], exception[1], exception[2])
         result = 1

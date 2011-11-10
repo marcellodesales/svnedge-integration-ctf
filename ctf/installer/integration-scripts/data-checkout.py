@@ -16,6 +16,7 @@ import os
 import os.path
 import select
 import shutil
+import SOAPpy
 import SourceForge
 import subprocess
 import svn
@@ -29,9 +30,8 @@ def executeSVNOperation(command):
     returncode = process.returncode
     if returncode != 0:
         raise RuntimeError, '%s failed with exit code %d\nStd Err: %s \nStd'\
-                            'output: %s' % (command, returncode, stderr, stdout)
+            'output: %s' % (command, returncode, stderr, stdout)
     return stdout
-
 
 def printUsageAndExit(error=None, exit_code=0):
     print
@@ -48,9 +48,10 @@ def printUsageAndExit(error=None, exit_code=0):
     sys.exit(exit_code)
 
 
+
 def main( ):
-    chkout_dir = SourceForge.getRequired("sfmain.integration.data_dir")
-    svn_repo = SourceForge.getRequired("scm.branding.repo")
+    chkout_dir=SourceForge.getRequired("sfmain.integration.data_dir")
+    svn_repo=SourceForge.getRequired("scm.branding.repo")
     changeOwnerdataDir = False
     # Condition remove the contents for the branding checkout folder
     # and check in the new contents to it.
@@ -67,32 +68,32 @@ def main( ):
             changeOwnerdataDir = True
 
     if os.path.isdir(chkout_dir):
-        for dr in os.listdir(chkout_dir):
-            if os.path.isdir(dr) and dr != '.svn':
-                shutil.rmtree(os.path.join(chkout_dir, dr))
+       for dr in os.listdir(chkout_dir):
+           if os.path.isdir(dr) and dr != '.svn':
+               shutil.rmtree(os.path.join(chkout_dir,dr))
 
     if not os.path.isdir(chkout_dir):
         os.makedirs(chkout_dir)
-    svn_cmd = "svn checkout file://" + svn_repo + " " + chkout_dir
+    svn_cmd="svn checkout file://"+svn_repo+ " " + chkout_dir
     executeSVNOperation(svn_cmd)
-
+    
     if changeOwnerdataDir or os.getuid() == 0:
-        user = SourceForge.getRequired("httpd.user")
-        group = SourceForge.getRequired("httpd.group")
-        os.system("chown -R %s:%s %s" % (user, group, chkout_dir))
+        user=SourceForge.getRequired("httpd.user")
+        group=SourceForge.getRequired("httpd.group")
+        os.system("chown -R %s:%s %s" % (user,group,chkout_dir))
 
-    scm = SourceForge.getSOAPClient("ScmListener")
+
+    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
     try:
         key = SourceForge.createScmRequestKey()
         scm.clearBrandingOverrideCache(key)
     except Exception, inst:
         import traceback
-
         traceback.print_tb(sys.exc_info()[2], None, None)
         return 1
-
+ 
 if __name__ == '__main__':
-    main()
+    main( )
 
 
 

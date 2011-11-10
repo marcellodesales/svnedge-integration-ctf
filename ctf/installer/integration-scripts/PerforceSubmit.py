@@ -2,13 +2,14 @@
 
 import os
 import PerforceUtil
+import SOAPpy 
 import SourceForge
 import subprocess
 import sys
 
 def perform(args, env):
-    perforcePort = SourceForge.getRequired('sfmain.integration.perforce.port')
-    p4bin = SourceForge.getRequired('sfmain.integration.executables.perforce')
+    perforcePort =    SourceForge.getRequired('sfmain.integration.perforce.port')
+    p4bin =           SourceForge.getRequired('sfmain.integration.executables.perforce')
     sourceforgeHome = SourceForge.getRequired('sfmain.sourceforge_home')
 
     # We should have exactly 6 arguments:
@@ -38,7 +39,7 @@ def perform(args, env):
     if returncode != 0:
         raise Exception('p4 describe exited abnormally: returncode=' + str(returncode) +
                         ' command=[' + command + ']' +
-                        ' output=' + describeout + ' error=' + describeerr)
+                         ' output=' + describeout + ' error=' + describeerr)
 
     describedata = PerforceUtil.parsePerforceDescribe(describeout, commandParams, 'false')
     content = describedata['logmsg']
@@ -49,7 +50,7 @@ def perform(args, env):
     # at this point in time i don't know how to explicitly set
     # the encoding that we read in.
 
-    scm = SourceForge.getSOAPClient("ScmListener")
+    scm = SOAPpy.SOAPProxy(SourceForge.getSOAPServiceUrl("ScmListener"))
 
     key = SourceForge.createScmRequestKey()
     commitMessageResponseStr = scm.isValidCommitMessage(key, user, systemid, repositoryroot, content)
@@ -66,7 +67,7 @@ def perform(args, env):
 
 # Actual execution is started here.
 try:
-    perform(sys.argv, os.environ)
+    perform(sys.argv,os.environ)
 except Exception, e:
     print 'PerforceSubmit Failed: ' + e.__str__()
     sys.exit(1)
