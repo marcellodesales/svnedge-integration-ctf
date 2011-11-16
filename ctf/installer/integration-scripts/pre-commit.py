@@ -32,7 +32,7 @@ def doIt(pool, repository, txn, systemId):
 
     log.write("commit message: %s\n" % logMsg)
     
-    scm = SourceForge.getSOAPClient("SourceForge")
+    scm = SourceForge.getSOAPClient("ScmListener")
     key = SourceForge.createScmRequestKey()
 
     # On Windows, we DO NOT pass the actual repository's full path and instead

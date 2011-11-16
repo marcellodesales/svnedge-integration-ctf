@@ -93,7 +93,7 @@ def main():
 
             log.write('Converting full Windows path to CTF full path: %s->%s' % (old_repo_path, repo_path))
 
-        scm = SourceForge.getSOAPClient("SourceForge")
+        scm = SourceForge.getSOAPClient("ScmListener")
         key = SourceForge.createScmRequestKey()
         response_raw = scm.isValidCommitMessage(key, user, system_id, repo_path, log_msg)
         response_parts = response_raw.split('\n')
