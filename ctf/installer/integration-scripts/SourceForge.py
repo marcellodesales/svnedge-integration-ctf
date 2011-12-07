@@ -126,9 +126,10 @@ def getSOAPClient(serviceName = 'ScmListener', soapVer = ''):
     httpProxyPassword = get('sfmain.integration.http_proxy_password')
     proxyDict = {}
     if httpProxyHost and len(httpProxyHost) > 0:
-        httpProxy = '%s:%s' % (httpProxyHost, httpProxyPort)
         if httpProxyUsername and len(httpProxyUsername) > 0:
-            httpProxy = 'http://%s:%s@%s' % (httpProxyUsername, httpProxyPassword, httpProxy)
+            httpProxy = 'http://%s:%s@%s:%s' % (httpProxyUsername, httpProxyPassword, httpProxyHost, httpProxyPort)
+        else: 
+            httpProxy = 'http://%s:%s' % (httpProxyHost, httpProxyPort)
         proxyDict['http'] = httpProxy 
         proxyDict['https'] = httpProxy
     if proxyDict and len(proxyDict) > 0:
