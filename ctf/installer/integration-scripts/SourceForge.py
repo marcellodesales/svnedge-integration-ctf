@@ -106,8 +106,8 @@ SOAP_API_DEFAULT_NAMESPACE = ''
 def getDefaultSoapVersion():
     global SOAP_API_DEFAULT_NAMESPACE
     if SOAP_API_DEFAULT_NAMESPACE == '':
-        cnSoap = getSOAPClient("CollabNet", "60")
         try:
+            cnSoap = getSOAPClient("CollabNet", "60")
             cnSoap.getApiVersion()
             SOAP_API_DEFAULT_NAMESPACE = "60"
         except Exception, e:
