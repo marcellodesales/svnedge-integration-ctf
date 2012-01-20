@@ -115,9 +115,8 @@ def getDefaultSoapVersion():
     return SOAP_API_DEFAULT_NAMESPACE
 
 def getSOAPClient(serviceName = 'ScmListener', soapVer = ''):
+    # find the service url
     SOAPServiceUrl = getSOAPServiceUrl(serviceName, soapVer)
-    # We need to override the location as the WSDL returns the wrong target namespace
-    scm = Client(SOAPServiceUrl + '?wsdl', location=SOAPServiceUrl)
     
     # add proxy settings if they exist
     httpProxyHost = get('sfmain.integration.http_proxy_host')
@@ -132,9 +131,10 @@ def getSOAPClient(serviceName = 'ScmListener', soapVer = ''):
             httpProxy = 'http://%s:%s' % (httpProxyHost, httpProxyPort)
         proxyDict['http'] = httpProxy 
         proxyDict['https'] = httpProxy
-    if proxyDict and len(proxyDict) > 0:
-        scm.set_options(proxy = proxyDict)
-                                           
+    
+    # Create the client with proxy and location options    
+    # We need to override the location from the WSDL which reports localhost
+    scm = Client(SOAPServiceUrl + '?wsdl', location=SOAPServiceUrl, proxy=proxyDict)                                       
     return scm.service
 
 def getSOAPServiceUrl(serviceName, soapVer = ''):
