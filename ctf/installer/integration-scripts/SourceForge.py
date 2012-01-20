@@ -119,18 +119,10 @@ def getSOAPClient(serviceName = 'ScmListener', soapVer = ''):
     SOAPServiceUrl = getSOAPServiceUrl(serviceName, soapVer)
     
     # add proxy settings if they exist
-    httpProxyHost = get('sfmain.integration.http_proxy_host')
-    httpProxyPort = get('sfmain.integration.http_proxy_port')
-    httpProxyUsername = get('sfmain.integration.http_proxy_username')
-    httpProxyPassword = get('sfmain.integration.http_proxy_password')
+    httpProxy = getProxyUrl()
     proxyDict = {}
-    if httpProxyHost and len(httpProxyHost) > 0:
-        if httpProxyUsername and len(httpProxyUsername) > 0:
-            httpProxy = 'http://%s:%s@%s:%s' % (httpProxyUsername, httpProxyPassword, httpProxyHost, httpProxyPort)
-        else: 
-            httpProxy = 'http://%s:%s' % (httpProxyHost, httpProxyPort)
-        proxyDict['http'] = httpProxy 
-        proxyDict['https'] = httpProxy
+    if httpProxy and len(httpProxy) > 0:
+        proxyDict[getProxyProtocol(SOAPServiceUrl)] = httpProxy 
     
     # Create the client with proxy and location options    
     # We need to override the location from the WSDL which reports localhost
@@ -159,6 +151,25 @@ def getSOAPServiceUrl(serviceName, soapVer = ''):
 
     return proto + "://" + host + ":" + port + soapPrefix + soapVer + "/services/" + serviceName
 
+def getProxyProtocol(url):
+    if url.startswith("https"): 
+        return "https"
+    else: 
+        return "http" 
+
+def getProxyUrl():
+    httpProxy = None
+    httpProxyHost = get('sfmain.integration.http_proxy_host')
+    httpProxyPort = get('sfmain.integration.http_proxy_port')
+    httpProxyUsername = get('sfmain.integration.http_proxy_username')
+    httpProxyPassword = get('sfmain.integration.http_proxy_password')
+    if httpProxyHost and len(httpProxyHost) > 0:
+        if httpProxyUsername and len(httpProxyUsername) > 0:
+            httpProxy = 'http://%s:%s@%s:%s' % (httpProxyUsername, httpProxyPassword, httpProxyHost, httpProxyPort)
+        else: 
+            httpProxy = 'http://%s:%s' % (httpProxyHost, httpProxyPort)
+    return httpProxy
+
 def getIntegrationServerUrl():
   """Creates a url to the integration server"""
   proto = ["http", "https"] [getBoolean("sfmain.integration.listener_ssl", "false")]
@@ -185,7 +196,13 @@ def getScmPermissionForPath(username, system_id, repo_path, access_type):
   if access_type:
     query_params['accessType'] = access_type
 
-  # Make servlet request and read response
+  # build a new opener that uses a proxy requiring authorization if needed
+  if getProxyUrl():
+      proxy_support = urllib2.ProxyHandler({getProxyProtocol(integration_url) : getProxyUrl()})
+      opener = urllib2.build_opener(proxy_support, urllib2.HTTPHandler)
+      # install it
+      urllib2.install_opener(opener)    
+
   servlet = urllib2.urlopen(integration_url, urllib.urlencode(query_params))
   lines = []
 

@@ -136,10 +136,9 @@ def _verify_session(req):
     system_id = query_params['system'][0]
 
   try:
-    scm_listener_url = SourceForge.getSOAPServiceUrl('ScmListener')
-    scm = Client('%s?wsdl' % scm_listener_url,
-                 location=scm_listener_url)
-    response = scm.service.getViewVCInformation(req.user_session, system_id, root)
+    
+    scm = SourceForge.getSOAPClient("ScmListener")
+    response = scm.getViewVCInformation(req.user_session, system_id, root)
 
     if DEBUG:
       req.log_error('[viewvc] Requesting ViewVC information from TeamForge (%s, %s, %s) -> %s' % (req.user_session, system_id, root, repr(response)))
@@ -318,9 +317,8 @@ def _prepare_viewvc(req):
     os.environ['CTF_TIMEZONE'] = SourceForge.get('ctf.displayTimezone', '');
     try:
         if int(SourceForge.getDefaultSoapVersion()) >= 60:
-            scm_listener_url = SourceForge.getSOAPServiceUrl('PluggableApp')
-            scm = Client('%s?wsdl' % scm_listener_url, location=scm_listener_url)
-            prefixes = scm.service.getIntegratedAppPrefixes(req.user_session)
+            scm = SourceForge.getSOAPClient("PluggableApp")
+            prefixes = scm.getIntegratedAppPrefixes(req.user_session)
             if len(prefixes) > 0:
                 regexSnippet = ''
                 for prefix in prefixes:
