@@ -13,8 +13,6 @@ import vcauth
 import vclib
 import ctfauthorizer
 
-from suds.client import Client
-
 class ViewVCAuthorizer(vcauth.GenericViewVCAuthorizer):
   """Custom ViewVC authorization module for TeamForge."""
   
@@ -37,24 +35,12 @@ class ViewVCAuthorizer(vcauth.GenericViewVCAuthorizer):
     system_id = self.query_dict['system']
 
     if self.roottype == "svn":
-        SOAPServiceUrl = SourceForge.getSOAPServiceUrl("ScmListener")
-
-        # add proxy settings if they exist
-        httpProxy = SourceForge.getProxyUrl()
-        proxyDict = {}
-        if httpProxy and len(httpProxy) > 0:
-            proxyDict[SourceForge.getProxyProtocol(SOAPServiceUrl)] = httpProxy
-
-        # Create the client with proxy and location options    
-        # We need to override the location from the WSDL which reports localhost
-
-        scm = Client(SOAPServiceUrl + '?wsdl', location=SOAPServiceUrl, proxy=proxyDict)
-
+        scm = SourceForge.getSOAPClient()
         key = SourceForge.createScmRequestKey()
         # if usename is empty then set as 'nobody' user
         if username is None or username == '':
             username = 'nobody'
-        raw_pbps = scm.service.getRolePaths(key, username, system_id, self.query_dict['root'])
+        raw_pbps = scm.getRolePaths(key, username, system_id, self.query_dict['root'])
         raw_pbps = map(str, raw_pbps)
         ctfauthorizer.set_pbps(raw_pbps)
 
