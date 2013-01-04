@@ -73,9 +73,9 @@
                     <include name="__init__.py" />
                   </fileset>
                 </copy>
-                <copy todir="target/integration-scripts/integration/viewvc/bin/mod_python">
-                  <fileset dir="installer/scripts/viewvc/mod_python">
-                    <include name="ctf_handler.py" />
+                <copy todir="target/integration-scripts/integration/viewvc/bin/cgi">
+                  <fileset dir="installer/viewvc/bin/cgi">
+                    <include name="ctf_viewvc.cgi" />
                   </fileset>
                 </copy>
                 <zip destfile="target/integration-scripts-latest.zip" basedir="target/integration-scripts" />
