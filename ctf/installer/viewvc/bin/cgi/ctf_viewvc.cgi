@@ -44,9 +44,11 @@ import string
 import urllib
 import urllib2
 
-DEBUG = True
-import cgitb
-cgitb.enable()
+DEBUG = False
+
+if DEBUG:
+  import cgitb
+  cgitb.enable()
 
 CSVN_HOME_DIR = os.getenv("CSVN_HOME")
 if CSVN_HOME_DIR:
@@ -256,7 +258,7 @@ def _get_return_to_url(query_params):
   # Trim the first character as it's a & and is unnecessary
   query_string = query_string[1:]
 
-  return_to_url = urllib.quote(os.getenv('SCRIPT_URI', 'FIXME'), '/:')
+  return_to_url = urllib.quote(os.getenv('SCRIPT_URI', 'SCRIPT_URI_UNDEFINED'), '/:')
   return_to_url = return_to_url + '?' + query_string
 
   return return_to_url
