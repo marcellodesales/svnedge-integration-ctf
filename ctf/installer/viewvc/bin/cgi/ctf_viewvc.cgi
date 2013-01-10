@@ -251,12 +251,11 @@ def _get_return_to_url(query_params):
     if key == 'js' or key == 'us':
       continue
 
-    query_string = query_string + '&'
     for value in query_params.getlist(key):
       query_string = query_string + key + "=" + value + '&'
 
-  # Trim the first character as it's a & and is unnecessary
-  query_string = query_string[1:]
+  # Trim the last character as it's a & and is unnecessary
+  query_string = query_string[:-1]
 
   return_to_url = urllib.quote(os.getenv('SCRIPT_URI', 'SCRIPT_URI_UNDEFINED'), '/:')
   return_to_url = return_to_url + '?' + query_string
