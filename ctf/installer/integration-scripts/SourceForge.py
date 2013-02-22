@@ -178,45 +178,6 @@ def getIntegrationServerUrl():
 
   return proto + "://" + host + ":" + port + "/integration"
 
-def getScmPermissionForPath(username, system_id, repo_path, access_type):
-  """Queries the ScmPermissionsProxyServlet on the integration server for permission"""
-  integration_url = getIntegrationServerUrl() + "/servlet/ScmPermissionsProxyServlet"
-  response = (1, 1, 1)
-
-  if not access_type:
-    response = (1, 1)
-
-  # The query params
-  query_params = {
-    'username': username,
-    'systemId': system_id,
-    'repoPath': repo_path,
-  }
-
-  if access_type:
-    query_params['accessType'] = access_type
-
-  # build a new opener that uses a proxy requiring authorization if needed
-  if getProxyUrl():
-      proxy_support = urllib2.ProxyHandler({getProxyProtocol(integration_url) : getProxyUrl()})
-      opener = urllib2.build_opener(proxy_support, urllib2.HTTPHandler)
-      # install it
-      urllib2.install_opener(opener)    
-
-  servlet = urllib2.urlopen(integration_url, urllib.urlencode(query_params))
-  lines = []
-
-  for line in servlet.readlines():
-    lines.append(line)
-
-  servlet.close()
-
-  response = lines[0].split(":")
-
-  response = [int(x) for x in response]
-
-  return response
-
 SCM_TIMESTAMP_SALT = 0x34A49f41
 SCM_KEY_SEED = "kaboomastringa"
 SCM_DEFAULT_SHARED_SECRET = "xnaskdxy*B R^qbiwgd"

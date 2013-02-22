@@ -34,23 +34,6 @@
     </init-param> <load-on-startup>100</load-on-startup> </servlet>
   -->
 
-  <!-- The bootstrap servlet for our application -->
-  <servlet>
-    <servlet-name>bootstrap</servlet-name>
-    <servlet-class>com.vasoftware.sf.externalintegration.BootstrapServlet</servlet-class>
-    <init-param>
-      <param-name>apiProtocolUrl</param-name>
-      <param-value>/WEB-INF/sf-api-protocols.xml</param-value>
-    </init-param>
-    <load-on-startup>100</load-on-startup>
-  </servlet>
-
-  <servlet>
-    <servlet-name>ScmPermissionsProxyServlet</servlet-name>
-    <servlet-class>com.vasoftware.sf.externalintegration.ScmPermissionsProxyServlet</servlet-class>
-    <load-on-startup>100</load-on-startup>
-  </servlet>
-
   <servlet-mapping>
     <servlet-name>AxisServlet</servlet-name>
     <url-pattern>/servlet/AxisServlet</url-pattern>
@@ -64,11 +47,6 @@
   <servlet-mapping>
     <servlet-name>AxisServlet</servlet-name>
     <url-pattern>/services/*</url-pattern>
-  </servlet-mapping>
-
-  <servlet-mapping>
-    <servlet-name>ScmPermissionsProxyServlet</servlet-name>
-    <url-pattern>/servlet/ScmPermissionsProxyServlet</url-pattern>
   </servlet-mapping>
 
   <!--
