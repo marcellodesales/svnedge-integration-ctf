@@ -344,7 +344,22 @@ public class SubversionWrapper {
         mExecutor.createHookScript(repositoryDir, CommandExecutor.HookEvent.PRE_REVPROP_CHANGE, 
                 preRevpropChangeContent.toString());
 
-        // TODO: Install the post-revprop-change hook for updating the commit object and sending an email
+        // Install the post-revprop-change hook
+        final StringBuilder postRevpropChangeContent = new StringBuilder();
+        postRevpropChangeContent.append(pythonExecutable)
+            .append(" \"")     
+            .append(sfIntegrationsRoot)
+            .append("/post-revprop-change.py\" ")
+            .append("\"$1\" ")
+            .append("\"$2\" ")
+            .append("\"$3\" ")
+            .append("\"$4\" ")
+            .append("\"$5\" ")
+            .append(systemId)
+            .append("\n");
+
+        mExecutor.createHookScript(repositoryDir, CommandExecutor.HookEvent.POST_REVPROP_CHANGE, 
+			           postRevpropChangeContent.toString());
     }
 
     /**

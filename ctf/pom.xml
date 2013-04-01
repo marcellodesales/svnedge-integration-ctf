@@ -60,6 +60,7 @@
                     <include name="LogFile.py" />
                     <include name="post-commit.py" />
                     <include name="pre-commit.py" />
+                    <include name="post-revprop-change.py" />
                     <include name="pre-revprop-change.py" />
                     <include name="sfauth.py" />
                     <include name="SourceForge.py" />
