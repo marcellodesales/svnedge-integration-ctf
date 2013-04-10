@@ -197,7 +197,8 @@ def _get_sf_header(java_session):
   ctf_url = os.getenv('CTF_BASE_URL')
   
   """ Calls the topInclude url to get the header contents of CTF. """
-  top_include_url = '%s/sfmain/do/topInclude/%s;jsessionid=%s?base=%s&returnTo=%s&helpTopicId=26' % (ctf_url, os.getenv('CTF_PROJECT_PATH'), java_session, ctf_url[0:ctf_url.rfind('/')], return_to_url)
+  top_include_url = '%s/sfmain/do/topInclude/%s;jsessionid=%s?base=%s&returnTo=%s&helpTopicId=26' % (ctf_url, os.getenv('CTF_PROJECT_PATH'), 
+          java_session, urllib.quote_plus(ctf_url[0:ctf_url.rfind('/')]), urllib.quote_plus(return_to_url))
 
   return urllib2.urlopen(top_include_url).read().strip()
 
@@ -237,9 +238,9 @@ def _redirect_to_ctf_error_page(session_ids, params, code):
     us = session_ids['user_session']
 
   if ctf_url_host != return_to_url_host:
-    session_query_params = '&js=%s&us=%s' % (js, us)
+    session_query_params = '&js=%s&us=%s' % (urllib.quote_plus(js), urllib.quote_plus(us))
 
-  _redirect('%s/scm/do/viewRepositoryError?code=%s&url=%s%s' % (ctf_url, code, urllib.quote(return_to_url), session_query_params))
+  _redirect('%s/scm/do/viewRepositoryError?code=%s&url=%s%s' % (ctf_url, code, urllib.quote_plus(return_to_url), session_query_params))
 
 # _redirect_to_ctf_error_page()
 
